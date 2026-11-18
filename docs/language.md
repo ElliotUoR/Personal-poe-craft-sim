@@ -123,6 +123,13 @@ Calls are expanded inline, and recursion is rejected.
 rule reforge_fills_locked_side on    # see docs/known-discrepancies.md #5
 ```
 
+### Selling (top level)
+```
+sell 16 divine if has "Hunter: additional curse"   # first matching line wins
+sell 0 chaos                                          # everything else
+```
+Adds expected sale value, expected profit, margin, P(loss) and profit percentiles to `run`.
+
 ### Goal and tracked outcomes (top level)
 ```
 goal has "Warlord: mana cost" elevated and has "Hunter: additional curse"

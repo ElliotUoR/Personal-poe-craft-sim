@@ -28,6 +28,8 @@ class Report:
     missing_prices: list = field(default_factory=list)
     example_item: str | None = None
     tracks: dict = field(default_factory=dict)
+    revenue: float | None = None  # expected sale value (only if the recipe has `sell` lines)
+    profit_stats: dict = field(default_factory=dict)  # MC: p_loss, percentiles of profit
 
     @property
     def cost_per_success(self):
@@ -58,6 +60,16 @@ class Report:
                 continue
             c = f"  = {v * prices[k]:,.0f}c" if prices else ""
             L.append(f"    {v:10.3f} x {k}{c}")
+        if self.revenue is not None:
+            prof = self.revenue - self.mean_chaos
+            L.append(f"  expected sale value : {self.revenue:,.0f} chaos  ({self.revenue / dv:.2f} divine)")
+            L.append(f"  expected profit     : {prof:,.0f} chaos  ({prof / dv:+.2f} divine) per attempt; "
+                     f"margin {prof / self.mean_chaos:+.1%} on cost, {prof / self.revenue:+.1%} of sales"
+                     if self.revenue and self.mean_chaos else "")
+            ps = self.profit_stats
+            if ps:
+                L.append(f"  profit distribution : P(loss) {ps['p_loss']:.1%}; p10 {ps[10] / dv:+.1f}div, "
+                         f"p50 {ps[50] / dv:+.1f}div, p90 {ps[90] / dv:+.1f}div")
         for lbl, pr in self.tracks.items():
             L.append(f"  P({lbl}) = {pr:.2%}")
         if self.agreement:
@@ -72,6 +84,7 @@ def mc_stats(engine: Engine, prog: Program, runs=2000, seed=0):
     counts = {}
     example = None
     tracks = {lbl: 0 for lbl, _c in prog.tracks}
+    profits, revenue = [], 0.0
     for i in range(runs):
         r = engine.run_mc(prog, seed=seed * 1_000_003 + i)
         c = engine.prices.chaos(r.costs)
@@ -84,6 +97,8 @@ def mc_stats(engine: Engine, prog: Program, runs=2000, seed=0):
             counts[k] = counts.get(k, 0.0) + v
         for k, v in r.tracks.items():
             tracks[k] += v
+        revenue += r.revenue
+        profits.append(r.revenue - c)
         if r.success and example is None and r.item is not None:
             example = r.item.describe(engine.gd)
     counts = {k: v / runs for k, v in counts.items()}
@@ -104,7 +119,17 @@ def mc_stats(engine: Engine, prog: Program, runs=2000, seed=0):
         "example": example,
         "runs": runs,
         "tracks": {k: v / runs for k, v in tracks.items()},
+        "revenue": revenue / runs,
+        "profit_stats": _profit_stats(profits),
     }
+
+
+def _profit_stats(profits):
+    s = sorted(profits)
+    if not s:
+        return {}
+    q = lambda x: s[min(len(s) - 1, int(x / 100 * len(s)))]
+    return {"p_loss": sum(p < 0 for p in s) / len(s), 10: q(10), 50: q(50), 90: q(90)}
 
 
 def exact_stats(engine: Engine, prog: Program, **budget):
@@ -112,7 +137,7 @@ def exact_stats(engine: Engine, prog: Program, **budget):
     mean = sum(engine.prices[k] * v for k, v in r.mean_counts.items())
     var = max(0.0, r.second_moment - mean * mean)
     return {"p_success": r.p_success, "mean_chaos": mean, "std_chaos": math.sqrt(var),
-            "mean_counts": r.mean_counts, "mean_lost": r.mean_counts.get(LOST, 0.0), "tracks": r.tracks,
+            "mean_counts": r.mean_counts, "mean_lost": r.mean_counts.get(LOST, 0.0), "tracks": r.tracks, "revenue": r.revenue,
             "n_outcomes": len(r.outcomes)}
 
 
@@ -144,7 +169,9 @@ def analyse(engine: Engine, prog: Program, runs=2000, mode="auto", seed=0, name=
         percentiles=mc["percentiles"] if mc else {}, mean_lost=main["mean_lost"],
         p_lose_base=mc["p_lose_base"] if mc else None, exact=ex, mc=mc, agreement=agreement,
         missing_prices=sorted(engine.prices.missing), example_item=mc["example"] if mc else None,
-        tracks=main.get("tracks", {}))
+        tracks=main.get("tracks", {}),
+        revenue=main.get("revenue") if prog.sales else None,
+        profit_stats=(mc or {}).get("profit_stats", {}) if prog.sales else {})
     return rep
 
 

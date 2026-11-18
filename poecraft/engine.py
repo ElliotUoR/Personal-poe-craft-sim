@@ -441,7 +441,17 @@ class Engine:
         if not ok and st.value:
             costs[LOST] = costs.get(LOST, 0) + st.value
         tracks = {lbl: bool(st.item is not None and self.cond(c, st)) for lbl, c in prog.tracks}
-        return RunResult(ok, costs, st.item, st.msg, steps, tracks)
+        return RunResult(ok, costs, st.item, st.msg, steps, tracks, self.revenue(prog, st))
+
+    def revenue(self, prog, st):
+        """Chaos value of the final item from the recipe's `sell` lines (first match wins).
+        A failed run (status fail) still sells if a sell condition holds for the item."""
+        if st.item is None:
+            return 0.0
+        for amt, c in prog.sales:
+            if self.cond(c, st):
+                return self.prices.chaos({UNIT_ALIASES.get(k, k): v for k, v in amt.items()})
+        return 0.0
 
     # ------------------------------------------------------------ i.i.d. loops
     # A loop whose body is a single "full reroll" action (Orb of Alteration, Chaos Orb)
@@ -531,6 +541,7 @@ class Engine:
             for lbl, c in prog.tracks:
                 if st.item is not None and self.cond(c, st):
                     res.tracks[lbl] = res.tracks.get(lbl, 0.0) + P
+            res.revenue += P * self.revenue(prog, st)
         return res
 
     def _chaos(self, vec):
@@ -835,6 +846,7 @@ class RunResult:
     msg: str
     steps: int
     tracks: dict = field(default_factory=dict)
+    revenue: float = 0.0
 
 
 @dataclass
@@ -844,6 +856,7 @@ class ExactResult:
     second_moment: float = 0.0
     outcomes: list = field(default_factory=list)
     tracks: dict = field(default_factory=dict)
+    revenue: float = 0.0
 
     def add(self, st, P, S1, S2, ok):
         if ok:

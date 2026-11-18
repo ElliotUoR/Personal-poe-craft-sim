@@ -1,0 +1,16 @@
+# Endgame Chest for SALE: no Hinekora previews, one bench lock + Caster reforge, then sell
+# whatever prefixes it has (as long as the curse is there). NO six-link or colours,
+# no Foulborn / armour craft. If the Awakener leaves no open prefix the item cannot get the
+# curse ("stuck"); it is then valued at the stuck price below.
+include "lib/endgame_chest_parts.craft"
+
+warlord_piece_lean()
+hunter_piece()
+merge_blind()
+curse_reforge()
+# (no six-link / omen)
+
+goal has "Warlord: mana cost" elevated and has "Hunter: attack crit" elevated and has "Hunter: additional curse"
+sell 16 divine if has "Hunter: additional curse" and has "Warlord: mana cost" elevated and has "Hunter: attack crit" elevated
+sell 0 chaos
+track "prefixes full after the reforge" prefix_count == 3

@@ -132,6 +132,7 @@ class Program:
     goal: object = None
     name: str = ""
     tracks: list = field(default_factory=list)
+    sales: list = field(default_factory=list)
     rules: dict = field(default_factory=dict)
 
 
@@ -151,7 +152,7 @@ CONQ_ACTIONS = {"hunter_exalt": "hunter", "warlord_exalt": "warlord", "redeemer_
                 "crusader_exalt": "crusader"}
 METRICS = {"prefix_count", "suffix_count", "mod_count", "open_prefix", "open_suffix", "open_prefixes",
            "open_suffixes", "influenced_count", "elevated_count", "crafted_count", "links"}
-KEYWORDS = {"rule", "track", "if", "else", "repeat", "until", "while", "foresee", "accept", "otherwise", "def", "include",
+KEYWORDS = {"sell", "rule", "track", "if", "else", "repeat", "until", "while", "foresee", "accept", "otherwise", "def", "include",
             "goal", "and", "or", "not", "has", "with", "for", "limit"}
 
 
@@ -163,6 +164,7 @@ class Parser:
         self.defs = defs if defs is not None else {}
         self.goal = None
         self.tracks = []
+        self.sales = []
         self.rules = {}
         self.include_stack = include_stack
 
@@ -206,7 +208,8 @@ class Parser:
             st = self.statement(top=True)
             if st is not None:
                 body.append(st)
-        return Program(Seq(1, self.file, body), self.defs, self.goal, tracks=self.tracks, rules=self.rules)
+        return Program(Seq(1, self.file, body), self.defs, self.goal, tracks=self.tracks, rules=self.rules,
+                       sales=self.sales)
 
     def block(self):
         start = self.expect("op", "{", "'{'")
@@ -279,6 +282,16 @@ class Parser:
             if val not in ("on", "off"):
                 raise self.err("rule value must be 'on' or 'off'")
             self.rules[name] = val == "on"
+            return None
+        if w == "sell":
+            # sell <amount> <unit> [if <cond>]   (first matching line wins; top level)
+            self.next()
+            n = self.expect("num", what="an amount").val
+            unit = self.expect("name", what="a currency (chaos, divine)").val
+            cond = ("const", True)
+            if self.accept("name", "if"):
+                cond = self.condition()
+            self.sales.append(({unit: n}, cond))
             return None
         if w == "track":
             self.next()
@@ -380,7 +393,7 @@ class Parser:
             return Call(line, self.file, w, args)
         hint = _suggest(w, list(SIMPLE_ACTIONS) + list(CONQ_ACTIONS) + [
             "buy", "set_aside", "take", "awaken", "essence", "craft", "beastcraft", "harvest", "omen",
-            "pay", "fail", "succeed", "show", "unveil", "rule", "track", "repeat", "until", "while", "if", "foresee", "goal", "def", "include"])
+            "pay", "fail", "succeed", "show", "unveil", "rule", "track", "sell", "repeat", "until", "while", "if", "foresee", "goal", "def", "include"])
         raise RecipeError(f"unknown statement '{w}'.{hint} (Sub-recipe calls need parentheses: {w}(...))",
                           line, self.file)
 
@@ -593,7 +606,8 @@ def parse(src, file=None) -> Program:
     goal = _subst(prog.goal, {}) if prog.goal else None
     tracks = [(lbl, _subst(c, {})) for lbl, c in prog.tracks]
     return Program(body, prog.defs, goal, name=os.path.splitext(os.path.basename(file))[0] if file else "recipe",
-                   tracks=tracks, rules=prog.rules)
+                   tracks=tracks, rules=prog.rules,
+                   sales=[(amt, _subst(c, {})) for amt, c in prog.sales])
 
 
 def parse_file(path) -> Program:
