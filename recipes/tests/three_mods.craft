@@ -1,0 +1,10 @@
+# Three influenced mods: Dominance keeps upgrading until crit is elevated or too few mods remain.
+buy "Astral Plate" ilvl 86 rare influence hunter
+    with "Hunter: attack crit" tier 2
+    with "Hunter: max life %" tier 1
+    with "Hunter: Offerings" tier 1
+    for 50 chaos
+until has "Hunter: attack crit" elevated or influenced_count < 2 {
+    dominance
+}
+goal has "Hunter: attack crit" elevated

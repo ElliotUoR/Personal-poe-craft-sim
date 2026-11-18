@@ -1,0 +1,15 @@
+{
+ "_doc": "Prices given by the project owner (chaos, mid-Nov 2026, outof.games/poe.ninja). Use with --prices data/prices_user_mid_nov_2026.json",
+ "prices": {
+  "divine": 156,
+  "awakener": 108,
+  "dominance": 223,
+  "hunter_exalt": 234,
+  "warlord_exalt": 166,
+  "fracture": 912,
+  "eldritch_chaos": 40,
+  "annul": 8.4,
+  "exalt": 0.9,
+  "alt": 0.09
+ }
+}

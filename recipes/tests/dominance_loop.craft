@@ -1,0 +1,10 @@
+# Retry with a fresh base until the attack crit mod is elevated.
+# Exact answer: geometric with p = 1/2 -> 2 Dominance + 2 bases expected.
+repeat {
+    buy "Astral Plate" ilvl 86 rare influence hunter
+        with "Hunter: attack crit" tier 1
+        with "Hunter: max life %" tier 1
+        for 50 chaos
+    dominance
+} until has "Hunter: attack crit" elevated
+goal has "Hunter: attack crit" elevated

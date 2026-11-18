@@ -1,0 +1,8 @@
+# Small exact test: a Hunter chest with T1 attack crit + one other Hunter mod.
+# One Orb of Dominance: 50% elevate crit, 50% elevate the other mod (crit removed).
+buy "Astral Plate" ilvl 86 rare influence hunter
+    with "Hunter: attack crit" tier 1
+    with "Hunter: max life %" tier 1
+    for 50 chaos
+dominance
+goal has "Hunter: attack crit" elevated
