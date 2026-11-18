@@ -1,0 +1,7 @@
+# Alteration spam on a magic Hunter Astral Plate until T1 Hunter attack crit, then regal.
+# The alt loop is a sequence of i.i.d. trials -> solved in closed form by both engines.
+buy "Astral Plate" ilvl 86 influence hunter for 20 chaos
+transmute
+until has "Hunter: attack crit" tier <= 1 { alt }
+regal
+goal has "Hunter: attack crit" tier 1
