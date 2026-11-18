@@ -180,7 +180,10 @@ pub fn exact_stats(gd: &GameData, prices: &Prices, prog: &Program, budget: Budge
         Err(ExactErr::Recipe(e)) => return Err(e),
     };
     used.0.extend(eng.mech.used.borrow().0.iter().copied());
-    let var = (res.second_moment - res.mean_chaos * res.mean_chaos).max(0.0);
+    let mut var = (res.second_moment - res.mean_chaos * res.mean_chaos).max(0.0);
+    if var < 1e-9 * res.mean_chaos * res.mean_chaos {
+        var = 0.0; // rounding left over from E[X^2] - E[X]^2
+    }
     let mean_lost = res.mean_counts.iter().find(|x| x.0 == LOST).map(|x| x.1).unwrap_or(0.0);
     Ok(Ok(Stats {
         p_success: res.p_success,

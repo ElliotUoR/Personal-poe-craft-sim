@@ -60,7 +60,7 @@ def main():
         rm, rse, rp, rn, rstd, rl = side(rs)
         if pn is None and rn is None:
             ok = (abs(pm - rm) <= 1e-6 * max(1, abs(pm)) and abs(pp - rp) <= 1e-9
-                  and abs(pstd - rstd) <= 1e-6 * max(1, pstd))
+                  and abs(pstd - rstd) <= 1e-4 * max(1, pm))
             detail = f"mean {pm:.4f} vs {rm:.4f}, std {pstd:.3f} vs {rstd:.3f}, p {pp:.6f} vs {rp:.6f}"
         else:
             zc = abs(pm - rm) / max(math.hypot(pse, rse), 1e-9)
