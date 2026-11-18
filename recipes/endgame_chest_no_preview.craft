@@ -1,0 +1,14 @@
+# Endgame Chest without Hinekora previews: the Warlord piece stays rare (no bench lock +
+# scour), the Awakener result is taken as it comes. If it has no open prefix you are stuck.
+include "lib/endgame_chest_parts.craft"
+
+warlord_piece_lean()
+hunter_piece()
+merge_blind()
+curse_reforge()
+fill_prefixes()
+finish()
+
+goal has "Warlord: mana cost" elevated and has "Hunter: attack crit" elevated and has "Hunter: additional curse"
+track "good third suffix (T1-T2 fire/cold/lightning/chaos res or Warlord all res)" has "fire res" tier <= 2 or has "cold res" tier <= 2 or has "lightning res" tier <= 2 or has "chaos res" tier <= 2 or has "Warlord: all res" tier <= 2
+track "prefixes full after the reforge (nothing crafted)" crafted_count == 0

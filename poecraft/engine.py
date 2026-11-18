@@ -182,6 +182,8 @@ class Engine:
                 raise self._err(a, "'take' needs the current item to be set aside first (set_aside <name>)")
             return replace(st, item=it, aside=st.without_aside(args["name"]), value=v), cost
         item = self._need_item(a, st)
+        if op == "foulborn_exalt":
+            return replace(st, item=M.foulborn_exalt(item, ch, args.get("side"))), {"foulborn_exalt": 1}
         if op in ("transmute", "alteration", "augment", "regal", "alchemy", "chaos", "exalt", "annul",
                   "dominance", "fracture", "veiled_exalt", "foulborn_exalt"):
             fn = {"transmute": M.transmute, "alteration": M.alteration, "augment": M.augment, "regal": M.regal,
@@ -215,8 +217,15 @@ class Engine:
             eid = self._essence(a, args["name"])
             return replace(st, item=M.essence(item, ch, eid)), {f"essence:{gd.essences[eid]['name']}": 1}
         if op == "craft":
-            mod_id, cost = self._bench(a, item, args["what"])
-            return replace(st, item=M.bench_craft(item, mod_id)), cost
+            # `craft "a", "b", "c"`: the first option the item allows (e.g. mod group taken)
+            options = [args["what"]] + list(args.get("fallbacks", []))
+            for i, what in enumerate(options):
+                mod_id, cost = self._bench(a, item, what)
+                try:
+                    return replace(st, item=M.bench_craft(item, mod_id)), cost
+                except M.CraftError:
+                    if i == len(options) - 1:
+                        raise
         if op == "beastcraft":
             return self._beast(a, st, item, ch)
         if op == "omen":
@@ -306,7 +315,7 @@ class Engine:
                 if b["mod"] == mid:
                     return mid, dict(b["cost"])
             raise self._err(a, f"bench craft {what} not available on {cls}")
-        low = what.lower()
+        low = gd.aliases.get(what.lower(), what).lower()
         hits = [b for b in opts if low in gd.mods[b["mod"]].text.lower() or low == b["mod"].lower()]
         if not hits:
             raise self._err(a, f'no bench craft matching "{what}" for {cls}. Builtins: {", ".join(self.BENCH_ALIASES)}')

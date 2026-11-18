@@ -8,7 +8,7 @@ merged_boots()
 crit_reforge()
 repeat limit 10 {
     make_room()
-    beastcraft lock_suffixes
+    craft lock_suffixes
     veiled_exalt
     if not has "Redeemer: elusive" { harvest reforge critical }
 } until has "Redeemer: elusive" or not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated

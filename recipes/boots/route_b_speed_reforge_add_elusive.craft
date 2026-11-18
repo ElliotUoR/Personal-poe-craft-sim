@@ -7,7 +7,7 @@ include "../lib/boots_parts.craft"
 merged_boots()
 repeat limit 60 {
     make_room()
-    beastcraft lock_suffixes
+    craft lock_suffixes
     harvest reforge speed
     if open_prefix >= 1 { beastcraft add_mod redeemer }
 } until has "Redeemer: elusive"

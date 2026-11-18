@@ -32,6 +32,6 @@ def make_room() {
 # Hunter/Redeemer boots (RePoE 3.30), so it is guaranteed.
 def crit_reforge() {
     make_room()
-    beastcraft lock_suffixes
+    craft lock_suffixes
     harvest reforge critical
 }

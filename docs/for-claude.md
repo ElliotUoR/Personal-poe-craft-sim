@@ -16,8 +16,10 @@ Workflow when the user describes a craft in plain English:
 Rules of thumb found so far:
 * Check "no other suffixes" (etc.) **before** paying for Dominance, not after.
 * "Suffixes Cannot Be Changed" is a prefix (and vice versa). Keep a slot open for it.
-* Every locked Harvest reforge retry needs a new metamod. The beastcraft (Wild Bristle Matron)
-  is cheaper than the 3.30 bench craft (4 div + 4 blessed).
+* Every locked Harvest reforge retry needs a new metamod. On rares that is the bench craft
+  (4 div + 4 blessed in 3.30); the beastcraft metamod only works on magic items.
+* The owner's practice: one locked reforge, then fill open prefixes (Foulborn exalt for 2 open,
+  bench craft for 1). Never annul to make room (too risky). Full prefixes = keep the item.
 * "Add a Mod to a <Conqueror> Item" beastcrafts cost ~2–3c and are the cheap way to get a
   second influenced mod for Dominance.
 

@@ -11,5 +11,11 @@
  "Redeemer: elusive": "ElusiveOnCriticalStrikeInfluence1",
  "flat life": "IncreasedLife10",
  "movement speed": "MovementVelocity5",
- "bench movement speed": "EinharMasterMovementVelocity3"
+ "bench movement speed": "EinharMasterMovementVelocity3",
+ "fire res": "FireResist8",
+ "cold res": "ColdResist8",
+ "lightning res": "LightningResist8",
+ "chaos res": "ChaosResist6",
+ "Warlord: all res": "AllResistancesInfluence3_",
+ "bench armour %": "EinharMasterArmourPercent3_"
 }

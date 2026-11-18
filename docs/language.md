@@ -50,7 +50,7 @@ buy "<base>" [normal|magic|rare] [ilvl N] [influence <i>[, <i>]]
 | `essence "<name>"` | e.g. `essence "Deafening Essence of Greed"` |
 | `veiled_exalt` | Veiled Exalted Orb: removes a random (unprotected) mod, adds a veiled affix |
 | `unveil "<mod>"[, "<mod>"...]` | unveil: 3 offers by weight; takes the first listed mod that is offered |
-| `foulborn_exalt` | UNVERIFIED stand-in: adds a random suffix |
+| `foulborn_exalt [prefix\|suffix]` | UNVERIFIED stand-in: adds a random mod (optionally only on one side) |
 
 ### Crafting bench
 ```
@@ -58,6 +58,7 @@ craft lock_suffixes     # "Suffixes Cannot Be Changed" (a crafted PREFIX), 4 div
 craft lock_prefixes     # "Prefixes Cannot Be Changed" (a crafted SUFFIX)
 craft multimod          # "Can have up to 3 Crafted Modifiers"
 craft "to maximum Life" # any bench mod by text (best tier)
+craft "bench armour %", "EinharMasterIncreasedLife5_"   # fallbacks: first one the item allows
 remove_crafted
 ```
 

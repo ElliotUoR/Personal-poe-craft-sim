@@ -15,7 +15,7 @@ def fill_suffixes() {
     until open_suffix == 0 {
         pay 4 divine                # bench "Prefixes Cannot Be Changed" (4 div + 4 blessed in 3.30)
         pay 4 blessed
-        foulborn_exalt
+        foulborn_exalt suffix       # the prefix lock keeps it off the prefixes
     }
 }
 
@@ -58,13 +58,13 @@ if not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated
 # ---- Steps 6-7: fill suffixes, lock suffixes, reforge Critical for Elusive, keep an open prefix
 repeat limit 30 {
     fill_suffixes()
-    beastcraft lock_suffixes
+    craft lock_suffixes
     harvest reforge critical
     until open_prefix >= 1 or not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated { annul }
 } until (has "Redeemer: elusive" and open_prefix >= 1) or not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated
 if not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated { fail "lost an elevated mod (step 7)" }
 fill_suffixes()
-beastcraft lock_suffixes
+craft lock_suffixes
 
 # ---- Step 8: Veiled Exalted Orb; if it removed the metamod, unveil movement speed
 repeat limit 30 {
@@ -74,7 +74,7 @@ repeat limit 30 {
         until open_prefix >= 1 or not has "Hunter: tailwind" elevated { annul }
         if open_prefix >= 1 {
             fill_suffixes()
-            beastcraft lock_suffixes
+            craft lock_suffixes
         }
     }
 } until (has "Redeemer: elusive" and has "VeiledPrefix") or not has "Hunter: tailwind" elevated

@@ -286,6 +286,11 @@ class Parser:
             self.tracks.append((label, self.condition()))
             return None
         self.next()
+        if w == "foulborn_exalt":
+            side = None
+            if self.peek().kind == "name" and self.peek().val in ("prefix", "suffix"):
+                side = self.next().val
+            return Act(line, self.file, "foulborn_exalt", {"side": side})
         if w in SIMPLE_ACTIONS:
             return Act(line, self.file, SIMPLE_ACTIONS[w])
         if w in CONQ_ACTIONS:
@@ -310,7 +315,10 @@ class Parser:
             if t2.kind == "name":
                 self.next()
                 return Act(line, self.file, "craft", {"what": t2.val})
-            return Act(line, self.file, "craft", {"what": self.string_or_param("a bench craft")})
+            opts = [self.string_or_param("a bench craft")]
+            while self.accept("op", ","):
+                opts.append(self.string_or_param("a bench craft"))
+            return Act(line, self.file, "craft", {"what": opts[0], "fallbacks": opts[1:]})
         if w == "beastcraft":
             what = self.expect("name", what="a beastcraft name").val
             args = {"what": what}

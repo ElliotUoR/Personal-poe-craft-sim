@@ -54,31 +54,40 @@ track "life prefix" has "flat life" tier <= 2
 ```
 
 ## First test case: Sanavixx "Endgame Chest"
-Recipes: `recipes/endgame_chest.craft` follows Sanavixx as written, including retries for a life
-prefix. `endgame_chest_no_retry.craft` accepts the first Caster reforge.
-`endgame_chest_hinekora.craft` adds the optional Hinekora preview. The two pieces can also be run
-on their own: `chest_warlord_piece.craft` and `chest_hunter_piece.craft`.
+The recipes follow the method as the project owner crafts it (corrections of 2026-11-18):
+* "Suffixes Cannot Be Changed" on a **rare** is the bench craft (4 div + 4 blessed). The metamod
+  beastcraft only works on **magic** items.
+* **One** locked Caster reforge. Then 2 open prefixes → Foulborn exalt; 1 open → bench
+  (56–74)% armour (flat armour / life if the % armour group is taken); full → keep the item.
+  Annulling to make room is too risky.
+* Hinekora previews on the Awakener are used to farm a good **third suffix** (T1–T2
+  fire/cold/lightning/chaos resistance or Warlord all-res) together with an open prefix.
 
-Results: 2000 Monte Carlo runs each, prices from outof.games (Covens league) fetched
-2026-11-18, divine = 203c.
+Recipes: `endgame_chest.craft` (with preview farming) and `endgame_chest_no_preview.craft`
+(Warlord piece stays rare; take whatever the Awakener gives). The two pieces can also be run
+alone: `chest_warlord_piece.craft` and `chest_hunter_piece.craft`.
 
-| recipe | success | expected cost | cost per success | std | p90 | P(life prefix) |
+3000 Monte Carlo runs each; prices from outof.games (Covens league) fetched 2026-11-18,
+divine = 203c.
+
+| recipe | success | expected cost | cost per success | p90 | good 3rd suffix | prefixes full after reforge |
 | --- | --- | --- | --- | --- | --- | --- |
-| endgame_chest_lean (own variant: skip the lock+scour step, no retries) | 97.2% | **11.0 div** | 11.3 div | 3.6 div | 15.8 div | ~2.5% |
-| endgame_chest_no_retry | 97.7% | 12.7 div | 13.0 div | 4.0 div | 18.1 div | 2.5% |
-| endgame_chest (as written, ≤10 life retries) | 97.7% | 18.5 div | 18.9 div | 5.9 div | 25.6 div | 13.3% |
-| endgame_chest_hinekora | 100% | 20.3 div | 20.3 div | 5.8 div | 27.4 div | 13.1% |
+| endgame_chest_no_preview | 89.2% | **15.1 div** | 16.9 div | 20.6 div | 12.7% | 21% |
+| endgame_chest (Hinekora farming) | 100% | 33.4 div | 33.4 div | 49.8 div | 90.3% | 9% |
 
-With the prices you gave (divine 156 etc., `--prices data/prices_user_mid_nov_2026.json`): 13.3 /
-20.8 / 23.2 div.
+Where the money goes in the preview version: ~8.5 Hinekora previews (Craicic Croaker + Black
+Mórrigan ≈ 1.5 div each, ≈ 13 div), 2 bench locks (8 div), 4 Dominance (6.4 div), a Foulborn
+exalt in 66% of runs (3.2 div each).
 
-**Compared with the ~17 div market price:** crafting the core item yourself (no life retries) is
-expected to cost ~13 div (p90 ~18 div), or ~11 div with the lean variant. The Awakener rerolls
-every non-kept mod, so the Warlord piece's "no other suffixes + lock + scour → magic" step only
-pays off if you use Hinekora's preview. Retrying the reforge for a life prefix
-costs ~6 div more, because every retry costs a Wild Bristle Matron (~215c) and it only lifts
-P(life) from 2.5% to 13%. On these numbers you should not retry. Buying a finished item at
-17 div is roughly break-even with the p75 of crafting.
+**Compared with the ~17 div market price:** taking the Awakener result as it comes costs about
+15 div (p90 21 div). 11% of runs get stuck (no open prefix for the lock) and need a new
+attempt. Farming a T1–T2 resistance third suffix with previews roughly doubles the cost.
+Each good suffix needs ~8.5 previews, and that assumes a declined preview can be re-locked for a
+fresh one (UNVERIFIED). That is only worth it if such an item sells for well over 17 div.
+
+Prefix outcomes after the single locked Caster reforge (Awakener taken as it comes; the 89% of
+items that had room for the lock): curse only (2 open) 58%, curse + 1 (1 open) 31%,
+curse + 2 (full) 12%.
 
 **Checks:**
 * *Sanity check (2 influenced mods, 50% per Dominance):* the Hunter piece uses **2.002**
@@ -87,21 +96,22 @@ P(life) from 2.5% to 13%. On these numbers you should not retry. Buying a finish
 * *Trap found:* if the Regal is allowed to add a non-influenced suffix before Dominance, the
   Warlord piece needs 4.3 Dominance (+3.4 div). Check "no other suffixes" **before**
   paying for Dominance.
-* About 10% of Awakener results have 3 prefixes, which leaves no room for the lock: the
-  "Suffixes Cannot Be Changed" metamod is itself a *prefix*. The recipe then uses
-  "Add a Suffix, Remove a Random Prefix" or an Annulment. That accounts for the 2.3% failures.
-* The Hinekora variant costs 1.9 div more and only removes those 2.3% failures, and that
-  assumes a declined preview can be re-locked for a fresh preview (UNVERIFIED). It is not
-  worth it at current beast prices.
+* "Suffixes Cannot Be Changed" is itself a *prefix*, so the Awakener result must leave one
+  prefix open (about 90% do).
+* **Dex and Int cannot roll on an Astral Plate** (pure strength base). Use a hybrid base if you
+  want them.
 
 ## Blind test: Hunter/Redeemer speed boots
 Full write-up: [docs/blind-test-boots.md](docs/blind-test-boots.md). Recipes are in `recipes/boots/`.
 
 | route | success | expected cost | cost per success | p90 | movement speed |
 | --- | --- | --- | --- | --- | --- |
-| **A: mine** (Critical reforge → guaranteed Elusive, bench MS) | 95.2% | **9.3 div** | **9.8 div** | 14.2 div | bench 20–24% |
-| D: hybrid (A + Sanavixx's Veiled finish) | 91.5% | 13.1 div | 14.4 div | 18.1 div | Chosen 25–30% in 45% |
-| Sanavixx method | 77.4% | 24.0 div | 31.0 div | 35.5 div | Chosen 25–30% in 75% |
+| **A: mine** (Critical reforge → guaranteed Elusive, bench MS) | 95.2% | **12.4 div** | **13.0 div** | 17.6 div | bench 20–24% |
+| D: hybrid (A + Sanavixx's Veiled finish) | 91.5% | 18.8 div | 20.6 div | 24.0 div | Chosen 25–30% in 45% |
+| Sanavixx method | 77.4% | 30.9 div | 39.9 div | 45.8 div | Chosen 25–30% in 75% |
+
+(Re-run with bench locks on rares after the "beast metamod is magic-only" correction; the first
+blind-test numbers in docs/blind-test-boots.md used the ~1 div beast lock.)
 
 ## Implemented mechanics
 All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its source.
@@ -135,8 +145,9 @@ All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its
 5. Awakener's Orb: the random pick among several influenced mods is uniform. The result is
    filled to the usual 4–6 mods.
 6. Chaos Orb keeps the side protected by a metamod.
-7. Beastcraft "Add a crafted Meta-modifier": the player chooses which metamod. It is the
-   same crafted mod as the bench one, so it takes an affix slot.
+7. Beastcraft "Add a crafted Meta-modifier": magic items only (in-game, user). UNVERIFIED: the
+   player chooses which metamod; it is the same crafted mod as the bench one, so it takes an
+   affix slot.
 8. Beastcraft "Add a Mod to a <Conqueror> Item": needs that influence already and adds a random mod
    of it with conqueror-exalt weights.
 9. "Add a Prefix, Remove a Random Suffix" (and the reverse): removes first, respects metamods.
@@ -145,7 +156,8 @@ All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its
 11. Max-links beastcraft gives a 6-link on body armours (sockets are not simulated).
 12. Fracturing Orb never picks crafted mods.
 13. Veiled Exalted Orb: removal respects metamods; the veiled affix goes to a uniformly chosen open
-    side. Unveil shows 3 offers drawn by weight. Foulborn Exalted Orb = "add a random suffix".
+    side. Unveil shows 3 offers drawn by weight. Foulborn Exalted Orb = "add a random mod like an
+    Exalted Orb" (optionally restricted to one side).
 14. Locked Harvest reforge does **not** add mods to the locked side (your rule). Sanavixx's boots
     method implies it does; switchable with `rule reforge_fills_locked_side on`.
 

@@ -1,10 +1,15 @@
-# Building blocks for the Sanavixx "Endgame Chest" (Astral Plate, Hunter + Warlord).
-# Used by recipes/endgame_chest*.craft.
+# Building blocks for the Sanavixx "Endgame Chest" (Astral Plate, Hunter + Warlord),
+# adjusted to how the project owner actually crafts it (2026-11-18):
+#   * "Suffixes Cannot Be Changed" on a rare = bench craft (4 div + 4 blessed); the
+#     metamod beastcraft only works on magic items.
+#   * ONE locked Caster reforge; then 2 open prefixes -> Foulborn exalt + bench armour,
+#     1 open -> bench armour, full -> keep the item (annulling is too risky).
+#   * Hinekora previews on the Awakener are used to farm a good third suffix
+#     (T1-T2 elemental/chaos resistance) with an open prefix for the lock.
 include "elevate.craft"
-include "merge.craft"
 
-# Step 1: Warlord piece -> magic Astral Plate with ONLY the elevated
-# "Socketed Attacks have -20 to Total Mana Cost / Ignore Stuns ..." suffix. Set aside as `warlord`.
+# Step 1: Warlord piece -> magic Astral Plate with ONLY the elevated mana-cost suffix
+# (magic is needed for Hinekora's Lock). Set aside as `warlord`.
 def warlord_piece() {
     buy "Astral Plate" ilvl 86 influence warlord for price "base:astral_plate_warlord_86"
     repeat {
@@ -13,14 +18,13 @@ def warlord_piece() {
         if influenced_count < 2 { beastcraft add_mod warlord }
         dominance_until_elevated("Warlord: mana cost")
     } until has "Warlord: mana cost" elevated and suffix_count == 1 and open_prefix >= 1
-    beastcraft lock_suffixes
+    craft lock_suffixes          # bench: the item is rare here
     scour
     set_aside warlord
 }
 
-# Step 1 (lean): the Awakener rerolls every non-kept mod of BOTH items, so other suffixes,
-# the suffix lock and the scour only matter if you want a MAGIC item for Hinekora's Lock.
-# Without the preview, any rare with the elevated mana mod as its only influenced mod works.
+# Step 1 (no preview): any rare whose only influenced mod is the elevated mana mod;
+# the Awakener rerolls everything else anyway.
 def warlord_piece_lean() {
     buy "Astral Plate" ilvl 86 influence warlord for price "base:astral_plate_warlord_86"
     elevate_warlord("Warlord: mana cost")
@@ -34,47 +38,47 @@ def hunter_piece() {
     set_aside hunter
 }
 
-# Step 3 (no preview): Awakener with the warlord piece as target (keeps the ilvl 86 base).
-def merge() {
+# Step 3 with previews: Hinekora's Lock on the magic warlord piece, look at the Awakener
+# result, only accept it with a good third suffix AND an open prefix (for the lock).
+# UNVERIFIED: a declined preview + a new lock gives a NEW independent preview.
+def merge_farm_third_suffix() {
+    take warlord
+    repeat limit 20 {
+        beastcraft hinekoras_lock
+        foresee awaken hunter accept if open_prefix >= 1 and (has "fire res" tier <= 2 or has "cold res" tier <= 2 or has "lightning res" tier <= 2
+                                    or has "chaos res" tier <= 2 or has "Warlord: all res" tier <= 2) otherwise { }
+    } until influenced hunter
+    if not influenced hunter {
+        # gave up farming: take any result that leaves room for the lock
+        repeat limit 20 {
+            beastcraft hinekoras_lock
+            foresee awaken hunter accept if open_prefix >= 1 otherwise { }
+        } until influenced hunter
+    }
+    if not influenced hunter { awaken hunter }
+}
+
+# Step 3 without previews.
+def merge_blind() {
     take warlord
     awaken hunter
-    make_room_for_lock()
 }
 
-# Step 3 (Sanavixx optional): Hinekora's Lock on the magic warlord piece, then foresee
-# the Awakener result and only accept it with an open prefix.
-# UNVERIFIED: if the preview is declined we assume a NEW lock gives a NEW independent
-# preview (i.e. the outcome is not fixed per item). If that is wrong the preview has
-# no value here beyond information.
-def merge_with_preview() {
-    take warlord
-    repeat limit 10 {
-        beastcraft hinekoras_lock
-        foresee awaken hunter accept if open_prefix >= 1 otherwise { }
-    } until influenced hunter
-    if not influenced hunter { awaken hunter }
-    make_room_for_lock()
-}
-
-def make_room_for_lock() {
-    make_room_for_suffix_lock("Warlord: mana cost", "Hunter: attack crit")
-}
-
-# Step 4: lock suffixes + Harvest reforge Caster. "You can apply an additional Curse" is
-# the only caster-tagged prefix on a Hunter/Warlord Astral Plate (RePoE 3.30), so it is guaranteed.
+# Step 4: one locked Caster reforge ("You can apply an additional Curse" is the only
+# caster-tagged prefix on a Hunter/Warlord Astral Plate, so it is guaranteed).
 def curse_reforge() {
-    beastcraft lock_suffixes
+    if open_prefix == 0 { fail "no open prefix for the Suffixes Cannot Be Changed craft (stuck)" }
+    craft lock_suffixes
     harvest reforge caster
 }
 
-# Optional: retry (lock + reforge each time) for a life prefix while a prefix is open.
-def retry_for_life() {
-    until has "flat life" tier <= 2 or has "Hunter: max life %" or open_prefix == 0 limit 10 {
-        curse_reforge()
-    }
+# Step 5: fill the open prefixes: 2 open -> Foulborn exalt; then 1 open -> bench armour.
+def fill_prefixes() {
+    if open_prefix >= 2 { foulborn_exalt }
+    if open_prefix >= 1 { craft "bench armour %", "EinharMasterFlatArmour3", "EinharMasterIncreasedLife5_" }
 }
 
-# Step 5: six-link + socket colours
+# Step 6: six-link + socket colours
 def finish() {
     beastcraft max_links
     omen blanching

@@ -429,9 +429,12 @@ def remove_crafted(item):
 # ---------------------------------------------------------------- beastcraft
 def beast_metamod(item, which):
     """Beastcraft 'Add a crafted Meta-modifier to a non-Unique Item' (Wild Bristle Matron).
+    In-game (user): only works on MAGIC items, not rares (Sanavixx's chest/boots guides
+    use it on rares; see docs/known-discrepancies.md #7).
     UNVERIFIED: the player chooses which metamod; it is the same crafted mod as the
-    bench version, so 'Suffixes Cannot Be Changed' needs an open PREFIX (consistent
-    with Sanavixx 'make sure 1 open prefix')."""
+    bench version, so 'Suffixes Cannot Be Changed' needs an open PREFIX."""
+    _require(item.rarity == "magic", "the metamod beastcraft only works on magic items (in-game, user); "
+                                     "on a rare use the bench craft: craft lock_suffixes (4 divine + 4 blessed)")
     mod = {"lock_suffixes": SUFFIX_LOCK, "lock_prefixes": PREFIX_LOCK, "multimod": MULTIMOD}[which]
     return bench_craft(item, mod)
 
@@ -540,10 +543,13 @@ def unveil(item, ch, preferences):
     return rest.with_mods(rest.mods + (Roll(choice, crafted=False),))
 
 
-def foulborn_exalt(item, ch):
-    """Foulborn Exalted Orb (Covens-era currency). NOT on PoEDB pages fetched; modelled
-    UNVERIFIED as 'adds one random suffix' because Sanavixx uses it to fill suffixes."""
+def foulborn_exalt(item, ch, side=None):
+    """Foulborn Exalted Orb (Covens-era currency). Its exact effect was not on the PoEDB
+    pages fetched. UNVERIFIED model: like an Exalted Orb, adds one random mod to an open
+    side (used by the user to fill an open prefix when suffixes are full, and by
+    Sanavixx to fill suffixes). ``side`` restricts it to one side, standing in for a
+    "Cannot Be Changed" craft on the other side (Sanavixx boots step 6)."""
     _require(item.rarity == "rare", "Foulborn Exalted Orb needs a rare item.")
-    nxt = add_random_mod(item, ch, sides=("suffix",))
-    _require(nxt is not None, "Foulborn Exalted Orb: no open suffix.")
+    nxt = add_random_mod(item, ch, sides=(side,) if side else ("prefix", "suffix"))
+    _require(nxt is not None, f"Foulborn Exalted Orb: no open {side or 'affix'}.")
     return nxt

@@ -123,6 +123,12 @@ Same prices, 3000 runs each:
   on a rare with 1 suffix + suffix lock, does a reforge ever add a suffix?
   (docs/known-discrepancies.md #5)
 
+### Update after the owner's corrections (2026-11-18)
+The metamod beastcraft only works on **magic** items, so every "Suffixes Cannot Be Changed" on
+these rares is the bench craft (4 div + 4 blessed). Re-run (3000 runs): A **12.4 div** (13.0
+per success), D 18.8 div, Sanavixx 30.9 div (39.9 per success), B 29.6 div, C 60.1 div. The
+ranking and the verdict above are unchanged; only the costs went up.
+
 ### Mechanics added for this comparison
 * Veiled Exalted Orb and unveil (RePoE `unveiled` mods; 3 offers by weight). UNVERIFIED:
   removal respects metamods; the side is uniform among open sides; offer count and weights.

@@ -230,3 +230,19 @@ goal has "Hunter: tailwind" and count(hunter) >= 2
     assert ENG.run_mc(prog, seed=1).success
     with pytest.raises(RecipeError):  # default rule: no physical prefix can roll
         ENG.run_mc(parse(src.replace("rule reforge_fills_locked_side on", "")), seed=1)
+
+
+def test_beast_metamod_only_on_magic():
+    rare = item(fam("Hunter: Attacks have").elevated, infl=("hunter",))
+    with pytest.raises(M.CraftError):
+        M.beast_metamod(rare, "lock_suffixes")
+    magic = item(fam("Warlord: total mana cost").elevated, infl=("warlord",), rarity="magic")
+    assert M.beast_metamod(magic, "lock_suffixes").suffixes_locked()
+
+
+def test_craft_fallbacks():
+    src = '''buy "Astral Plate" ilvl 86 rare with "LocalIncreasedPhysicalDamageReductionRatingPercent5"
+craft "bench armour %", "EinharMasterIncreasedLife5_"
+goal crafted_count == 1'''
+    r = ENG.run_mc(parse(src), seed=0)
+    assert r.success and len(r.item.crafted_mods()) == 1

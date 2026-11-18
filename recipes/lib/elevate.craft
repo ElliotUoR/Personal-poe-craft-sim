@@ -48,9 +48,9 @@ def elevate_redeemer(mod) {
 }
 
 # Strip everything except the suffixes, leaving a magic item when only one suffix is left.
-# Uses the beastcraft metamod (Wild Bristle Matron, ~1 div) instead of the bench
-# "Suffixes Cannot Be Changed" (4 divine + 4 blessed in 3.30). Needs an open prefix.
+# Bench "Suffixes Cannot Be Changed" (4 divine + 4 blessed in 3.30; the beastcraft
+# metamod only works on magic items). Needs an open prefix.
 def keep_only_suffixes() {
-    beastcraft lock_suffixes
+    craft lock_suffixes
     scour
 }
