@@ -35,6 +35,13 @@ hints computed from the pool, paste/import, Copy item for PoB), Simulator (pick 
 live progress bar), Compare (rank several recipes), Rules, Prices. The JSON API is documented at the
 top of `crates/poecraft-server/src/main.rs`.
 
+Test in PoB: the item builder's "Test in Path of Building" card scores the item in any of your
+PoB builds (found under Documents/Path of Building/Builds) through the sibling `pob-headless`
+harness (`tools/pob/score_items.lua`): Pinnacle boss, guard skills excluded from EHP, optional
+resists-capped fill, flasks up and down, DPS/EHP/max-hit change against the item currently in the
+slot. About 4.5 s per build; the build files are never modified. Env overrides: POB_HEADLESS,
+POB_BUILDS.
+
 Trade links: the item builder's "Open trade search" (or `POST /api/trade/link`) builds a
 pathofexile.com search for the item: one stat filter per mod line (lower end of the tier's range,
 negative values as a maximum), influence filters, exact base or any base of the class, instant

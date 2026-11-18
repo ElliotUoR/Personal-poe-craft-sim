@@ -64,6 +64,19 @@
         <div class="row"><label>Your expected sell price (div) <input id="sellPrice" type="number" step="0.5" min="0" placeholder="e.g. 16"></label></div>
         <p class="muted small">Use it in a recipe as <code>sell N divine</code> to get profit and margin.</p>
       </div>
+      <div class="card">
+        <h2>Test in Path of Building</h2>
+        <input id="buildFilter" placeholder="filter builds">
+        <div id="buildList" class="chips" style="max-height:150px;overflow:auto"></div>
+        <div class="row">
+          <label class="small"><input id="pobFill" type="checkbox" checked> resists capped</label>
+          <label class="small"><input id="pobFast" type="checkbox"> fast (tooltip path, DPS ~2-3% off)</label>
+          <button id="pobBtn">Test item</button>
+        </div>
+        <div class="progress" id="pobProgress" hidden><div class="bar"><div></div></div><span class="ptext"></span></div>
+        <div id="pobResult" class="small"></div>
+        <p class="muted small">Pinnacle boss, guard skills excluded from EHP, flasks up and down; the build file is not changed.</p>
+      </div>
       <div class="card" id="hintsCard"><h2>Crafting hints</h2><ul id="hints"></ul></div>
     </div>
 

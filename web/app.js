@@ -218,6 +218,46 @@ function reportHtml(r) {
   return html + `</div>`;
 }
 
+// ------------------------------------------------------------------ Test in PoB
+let BUILDS = [];
+async function loadBuilds() {
+  try { BUILDS = (await api("/api/pob/builds")).builds; } catch { BUILDS = []; }
+  renderBuilds();
+}
+function renderBuilds() {
+  const f = $("#buildFilter").value.toLowerCase();
+  const on = new Set([...document.querySelectorAll("[data-build].on")].map((c) => c.dataset.build));
+  $("#buildList").innerHTML = BUILDS.filter((b) => !f || b.path.toLowerCase().includes(f)).slice(0, 80)
+    .map((b) => `<span class="chip ${on.has(b.path) ? "on" : ""}" data-build="${esc(b.path)}" title="${esc(b.path)}">${esc(b.name)}</span>`).join("") || `<span class="muted small">No PoB builds found.</span>`;
+  document.querySelectorAll("[data-build]").forEach((c) => c.addEventListener("click", () => c.classList.toggle("on")));
+}
+$("#buildFilter").addEventListener("input", renderBuilds);
+$("#pobBtn").addEventListener("click", () => {
+  const builds = [...document.querySelectorAll("[data-build].on")].map((c) => c.dataset.build);
+  if (!builds.length) { $("#pobResult").innerHTML = `<span class="problems">Pick one or more builds.</span>`; return; }
+  $("#pobBtn").disabled = true; $("#pobResult").innerHTML = "";
+  runJob("/api/pob/test", { items: [itemDto()], builds, fill: $("#pobFill").checked, fast: $("#pobFast").checked }, $("#pobProgress"), (res, err) => {
+    $("#pobBtn").disabled = false;
+    if (err) { $("#pobResult").innerHTML = `<div class="err">${esc(err)}</div>`; return; }
+    const row = (label, a, b, d = 0, pct = true) => {
+      const ch = a ? (b / a - 1) * 100 : 0;
+      const col = Math.abs(ch) < 0.05 ? "" : ch > 0 ? "color:var(--good)" : "color:var(--bad)";
+      return `<tr><td>${label}</td><td>${fmt(a, d)}</td><td>${fmt(b, d)}</td><td style="${col}">${pct ? (ch >= 0 ? "+" : "") + fmt(ch, 1) + "%" : ""}</td></tr>`;
+    };
+    $("#pobResult").innerHTML = res.builds.map((x) => {
+      const r = x.result;
+      if (r.error) return `<div class="err">${esc(x.build)}: ${esc(r.error)}</div>`;
+      const it = r.items[0];
+      if (it.error) return `<div class="err">${esc(x.build)}: ${esc(it.error)}</div>`;
+      const t = (f) => { const a = r.current.stats[f], b = it.stats[f];
+        return `<tr><th colspan="4">flasks ${f}</th></tr>` + row("Full DPS", a.fullDPS, b.fullDPS) + row("EHP", a.ehp, b.ehp) + row("Phys max hit", a.physMaxHit, b.physMaxHit) + row("Ele max hit", a.eleMaxHit, b.eleMaxHit) + row("Life", a.life, b.life) + row("Armour", a.armour, b.armour); };
+      return `<div style="margin-top:8px"><b>${esc(x.build)}</b> <span class="muted">· ${esc(r.mainSkill)} · replacing ${esc(r.current.name)} in ${esc(r.slot)}</span>
+        <table class="pool"><thead><tr><th></th><th>current</th><th>this item</th><th>change</th></tr></thead><tbody>${t("up")}${t("down")}</tbody></table>
+        ${it.unsupported.length ? `<div class="muted">Not used by PoB's calcs: ${it.unsupported.map(esc).join("; ")}</div>` : ""}</div>`;
+    }).join("");
+  });
+});
+
 // ------------------------------------------------------------------ simulator
 let RECIPES = [];
 async function loadRecipes() {
@@ -295,4 +335,5 @@ let META = { influences: [] };
   await loadRecipes();
   await loadRules();
   await loadPrices();
+  await loadBuilds();
 })();

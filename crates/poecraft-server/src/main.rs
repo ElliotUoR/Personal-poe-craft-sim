@@ -13,6 +13,8 @@
 //!   POST /api/jobs/compare {recipes: [{source, path?}], runs?, mode?} -> {job}
 //!   GET  /api/jobs/{id}                  progress (phase, done, total, label) and result
 //!   POST /api/trade/link  {item, any_base?, league?}   pathofexile.com trade search link
+//!   GET  /api/pob/builds                 PoB build files (newest first)
+//!   POST /api/pob/test    {items, builds, slot?, fill?, fast?}  score items in builds -> {job}
 //!   GET  /api/rules                      rules registry
 //!   GET  /api/prices                     price table and its metadata
 //!   POST /api/prices/fetch               run tools/fetch_prices.py (poe.ninja) and reload
@@ -399,6 +401,115 @@ async fn trade_link(State(app): State<App>, Json(r): Json<TradeReq>) -> ApiResul
     Ok(Json(json!({ "url": l.url, "filters": l.filters, "skipped": l.skipped, "league": league, "stats_fetched": ts.fetched })))
 }
 
+// ------------------------------------------------------------------ Test in PoB (spec §4.E)
+fn pob_headless_dir(app: &App) -> PathBuf {
+    std::env::var("POB_HEADLESS").map(PathBuf::from).unwrap_or_else(|_| app.root.parent().map(|p| p.join("pob-headless")).unwrap_or_default())
+}
+fn pob_builds_dir() -> PathBuf {
+    std::env::var("POB_BUILDS").map(PathBuf::from).unwrap_or_else(|_| {
+        let home = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).unwrap_or_default();
+        Path::new(&home).join("Documents").join("Path of Building").join("Builds")
+    })
+}
+fn find_python() -> Option<&'static str> {
+    ["python", "py", "python3"].into_iter().find(|exe| std::process::Command::new(exe).arg("--version").output().is_ok_and(|o| o.status.success()))
+}
+
+/// Equipment slot for an item class (PoB slot names).
+fn slot_for(cls: &str) -> Option<&'static str> {
+    Some(match cls {
+        "Body Armour" => "Body Armour",
+        "Boots" => "Boots",
+        "Gloves" => "Gloves",
+        "Helmet" => "Helmet",
+        "Amulet" => "Amulet",
+        "Belt" => "Belt",
+        "Ring" => "Ring 1",
+        "Shield" | "Quiver" => "Weapon 2",
+        "LifeFlask" | "ManaFlask" | "HybridFlask" | "UtilityFlask" => "Flask 1",
+        "Jewel" | "AbyssJewel" | "Tincture" => return None,
+        _ => "Weapon 1",
+    })
+}
+
+async fn pob_builds() -> ApiResult<Value> {
+    let dir = pob_builds_dir();
+    fn walk(d: &Path, out: &mut Vec<(std::time::SystemTime, PathBuf)>) {
+        if let Ok(rd) = std::fs::read_dir(d) {
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    walk(&p, out);
+                } else if p.extension().is_some_and(|x| x == "xml") {
+                    out.push((e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH), p));
+                }
+            }
+        }
+    }
+    let mut files = vec![];
+    walk(&dir, &mut files);
+    files.sort_by(|a, b| b.0.cmp(&a.0));
+    let list: Vec<Value> = files.iter().take(400).map(|(_, p)| json!({"path": p.strip_prefix(&dir).unwrap_or(p).to_string_lossy().replace('\\', "/"), "name": p.file_stem().map(|s| s.to_string_lossy().to_string())})).collect();
+    Ok(Json(json!({ "dir": dir.to_string_lossy(), "builds": list })))
+}
+
+#[derive(Deserialize)]
+struct PobReq {
+    items: Vec<ItemDto>,
+    builds: Vec<String>,
+    slot: Option<String>,
+    fill: Option<bool>,
+    fast: Option<bool>,
+}
+async fn pob_test(State(app): State<App>, Json(r): Json<PobReq>) -> ApiResult<Value> {
+    let gd = app.gd;
+    if r.items.is_empty() || r.builds.is_empty() {
+        return Err(ApiError(StatusCode::BAD_REQUEST, "pick at least one item and one build".into()));
+    }
+    let first = to_item(gd, &r.items[0])?;
+    let cls = gd.item_class(first.base).to_string();
+    let slot = r.slot.clone().or_else(|| slot_for(&cls).map(|s| s.to_string())).ok_or_else(|| ApiError(StatusCode::BAD_REQUEST, format!("{cls} items are not supported in Test in PoB yet")))?;
+    let mut texts = vec![];
+    for d in &r.items {
+        texts.push(to_pob_text(gd, &to_item(gd, d)?, &ExportOpts::default()));
+    }
+    let harness = pob_headless_dir(&app);
+    if !harness.join("run.py").exists() {
+        return Err(ApiError(StatusCode::NOT_FOUND, format!("pob-headless not found at {} (set POB_HEADLESS)", harness.display())));
+    }
+    let scorer = app.root.join("tools").join("pob").join("score_items.lua");
+    let builds_dir = pob_builds_dir();
+    let builds = r.builds.clone();
+    let (fill, fast) = (r.fill.unwrap_or(true), r.fast.unwrap_or(false));
+    let n = builds.len();
+    let id = start_job(&app, format!("PoB test in {n} build(s)"), move |p| {
+        let py = find_python().ok_or("Python is needed to run pob-headless")?;
+        p.start("scoring in PoB", n);
+        let tmp = std::env::temp_dir().join(format!("poecraft_items_{}.json", std::process::id()));
+        std::fs::write(&tmp, json!({"slot": slot, "items": texts}).to_string()).map_err(|e| e.to_string())?;
+        let mut out = vec![];
+        for (k, b) in builds.iter().enumerate() {
+            *p.label.lock().unwrap() = format!("[{}/{n}] {b}", k + 1);
+            let path = builds_dir.join(b);
+            let res = std::process::Command::new(py)
+                .current_dir(&harness)
+                .arg("run.py").arg("--build").arg(&path).arg("--lua").arg(&scorer)
+                .env("ITEMS_JSON", &tmp).env("FILL", if fill { "1" } else { "0" }).env("FAST", if fast { "1" } else { "0" })
+                .output();
+            let v = match res {
+                Ok(o) if o.status.success() => serde_json::from_slice::<Value>(&o.stdout).map(|j| j["experiment"].clone()).unwrap_or_else(|e| json!({"error": format!("bad harness output: {e}")})),
+                Ok(o) => json!({"error": String::from_utf8_lossy(&o.stderr).to_string()}),
+                Err(e) => json!({"error": e.to_string()}),
+            };
+            out.push(json!({"build": b, "result": v}));
+            p.tick();
+        }
+        let _ = std::fs::remove_file(&tmp);
+        Ok(json!({ "slot": slot, "fill": fill, "fast": fast, "builds": out }))
+    });
+    Ok(Json(json!({ "job": id })))
+}
+
 async fn rules() -> Json<Value> {
     Json(json!(RULES))
 }
@@ -448,6 +559,8 @@ async fn main() -> Result<()> {
         .route("/api/jobs/compare", post(job_compare))
         .route("/api/jobs/{id}", get(job_get))
         .route("/api/trade/link", post(trade_link))
+        .route("/api/pob/builds", get(pob_builds))
+        .route("/api/pob/test", post(pob_test))
         .route("/api/rules", get(rules))
         .route("/api/prices", get(prices_handler))
         .route("/api/prices/fetch", post(prices_fetch))
