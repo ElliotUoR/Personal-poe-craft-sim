@@ -271,6 +271,8 @@ pub struct PoolOpts {
     pub tag: Option<TagIdx>,
     /// only influenced mods (any influence the item has)
     pub influenced: bool,
+    /// draw as if every slot were open (fresh-roll model for locked rerolls)
+    pub ignore_slots: bool,
 }
 
 impl PoolOpts {
@@ -281,6 +283,7 @@ impl PoolOpts {
             influence_only: None,
             tag: None,
             influenced: false,
+            ignore_slots: false,
         }
     }
     pub fn side(g: Gen) -> Self {
@@ -290,6 +293,7 @@ impl PoolOpts {
             influence_only: None,
             tag: None,
             influenced: false,
+            ignore_slots: false,
         }
     }
     fn allows(&self, g: Gen) -> bool {
@@ -354,8 +358,8 @@ impl<'a> Mech<'a> {
     pub fn pool(&self, item: &Item, opts: PoolOpts) -> Rc<Pool> {
         let gd = self.gd;
         let groups = item.group_ids(gd);
-        let open_p = item.open_slots(gd, Gen::Prefix) > 0;
-        let open_s = item.open_slots(gd, Gen::Suffix) > 0;
+        let open_p = opts.ignore_slots || item.open_slots(gd, Gen::Prefix) > 0;
+        let open_s = opts.ignore_slots || item.open_slots(gd, Gen::Suffix) > 0;
         let no_attack = item.meta(gd, MetaKind::NoAttackMods);
         let no_caster = item.meta(gd, MetaKind::NoCasterMods);
         let key = PoolKey {
@@ -460,6 +464,32 @@ impl<'a> Mech<'a> {
         } else {
             self.count(ch, &RARE_MOD_COUNT, "rare_mod_count")
         }
+    }
+
+    /// Fresh-roll model for locked rerolls (rule switch `locked_reroll_fresh`, Q3 alternative):
+    /// `draws` mods are rolled as if the item were empty (both sides, mod-group exclusion kept);
+    /// a draw that lands on a side with no open slot, or on a side the reroll may not change,
+    /// is lost. Reproduces the PoE Wiki Meta-crafting_mod example ("may add 1 prefix and 0-3
+    /// suffixes, or 0 prefixes and 1-3 suffixes").
+    pub fn fill_fresh(&self, mut item: Item, ch: &mut dyn Chooser, draws: usize, sides: PoolOpts) -> Item {
+        let gd = self.gd;
+        for _ in 0..draws {
+            let pool = self.pool(&item, PoolOpts { prefix: true, suffix: true, ignore_slots: true, ..PoolOpts::default() });
+            if pool.mods.is_empty() {
+                break;
+            }
+            let m = pool.mods[ch.weighted(&pool.weights)];
+            let g = gd.m(m).gen;
+            let side_ok = match g {
+                Gen::Prefix => sides.prefix,
+                Gen::Suffix => sides.suffix,
+                Gen::Other => false,
+            };
+            if side_ok && item.open_slots(gd, g) > 0 {
+                item = item.with_added(Roll::new(m));
+            }
+        }
+        item
     }
 
     fn count(&self, ch: &mut dyn Chooser, table: &[(usize, u32)], rule: &'static str) -> usize {
@@ -605,6 +635,12 @@ impl<'a> Mech<'a> {
         self.rule("chaos_keeps_locked");
         let prot = self.protected(item, ch);
         let keep = self.kept(item, &prot, false);
+        let locked = item.lock_on(self.gd, Gen::Prefix) != Lock::None || item.lock_on(self.gd, Gen::Suffix) != Lock::None;
+        if locked && self.sw.locked_reroll_fresh {
+            self.rule("reforge_mod_count");
+            let draws = self.rare_count(item, ch);
+            return Ok(self.fill_fresh(item.with_mods(keep), ch, draws, PoolOpts::both()));
+        }
         let n = (keep.len() + 1).max(self.rare_count(item, ch));
         Ok(self.fill_random(item.with_mods(keep), ch, n, PoolOpts::both()))
     }
@@ -888,6 +924,12 @@ impl<'a> Mech<'a> {
         let mut mods = keep;
         mods.push(Roll::new(first));
         let it = base.with_mods(mods);
+        let locked = item.lock_on(gd, Gen::Prefix) != Lock::None || item.lock_on(gd, Gen::Suffix) != Lock::None;
+        if locked && self.sw.locked_reroll_fresh {
+            // the guaranteed tagged mod is one of the fresh draws
+            let draws = self.rare_count(item, ch).saturating_sub(1);
+            return Ok(self.fill_fresh(it, ch, draws, sides));
+        }
         let n = it.mods.len().max(self.rare_count(item, ch));
         Ok(self.fill_random(it, ch, n, sides))
     }

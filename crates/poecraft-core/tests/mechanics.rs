@@ -103,9 +103,7 @@ fn reforge_respects_full_lock_consumes_it_and_guarantees_curse() {
     // with the switch off nothing is added to the locked side (pre-2026-11-18 model)
     let mech = Mech::new(
         g,
-        Switches {
-            reforge_fills_locked_side: false,
-        },
+        Switches { reforge_fills_locked_side: false, ..Default::default() },
     );
     let crit = elevated("Hunter: Attacks have", "Body Armour");
     let mana = elevated("Warlord: total mana cost", "Body Armour");
@@ -210,9 +208,7 @@ fn partial_lock_covering_all_suffixes_acts_as_full_lock() {
     let g = gd();
     let mech = Mech::new(
         g,
-        Switches {
-            reforge_fills_locked_side: false,
-        },
+        Switches { reforge_fills_locked_side: false, ..Default::default() },
     );
     let crit = elevated("Hunter: Attacks have", "Body Armour");
     let mana = elevated("Warlord: total mana cost", "Body Armour");

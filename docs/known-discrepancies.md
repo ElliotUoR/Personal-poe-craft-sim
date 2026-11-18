@@ -32,3 +32,9 @@ everything. Do not use CoE numbers for locked reforges.
   curse only when all 3 suffixes are full: with 2 suffixes the guaranteed caster mod is the Hunter
   spell-crit suffix about 2/3 of the time. `recipes/lib/endgame_chest_parts.craft` has
   `curse_reforge_safe` (fill the 3rd suffix with an Exalted Orb, then one guaranteed retry).
+
+## Craft of Exile ignores metamods on Chaos Orbs too (2026-11-18)
+On beta.craftofexile.com (3.29 data) an imported Royal Plate with three T1 resistance suffixes and
+"Suffix Modifiers cannot be changed" lost all three suffixes to a single Chaos Orb. PoE Wiki
+(Meta-crafting_mod) and the owner's in-game test both say locked mods survive rerolls. So CoE
+cannot be used for any locked reroll, Harvest or Chaos.

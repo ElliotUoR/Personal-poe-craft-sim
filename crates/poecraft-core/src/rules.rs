@@ -76,12 +76,16 @@ pub fn info(id: &str) -> Option<&'static RuleInfo> {
 pub struct Switches {
     /// Owner-confirmed 2026-11-18: on.
     pub reforge_fills_locked_side: bool,
+    /// Q3 alternative: locked rerolls draw 4-6 fresh mods and lose those that land on a full or
+    /// locked side (off = fill to 4-6 total including kept mods).
+    pub locked_reroll_fresh: bool,
 }
 
 impl Default for Switches {
     fn default() -> Self {
         Switches {
             reforge_fills_locked_side: true,
+            locked_reroll_fresh: false,
         }
     }
 }
@@ -90,9 +94,10 @@ impl Switches {
     pub fn set(&mut self, name: &str, on: bool) -> Result<(), String> {
         match name {
             "reforge_fills_locked_side" => self.reforge_fills_locked_side = on,
+            "locked_reroll_fresh" => self.locked_reroll_fresh = on,
             _ => {
                 return Err(format!(
-                    "unknown rule '{name}' (switchable: reforge_fills_locked_side)"
+                    "unknown rule '{name}' (switchable: reforge_fills_locked_side, locked_reroll_fresh)"
                 ))
             }
         }
