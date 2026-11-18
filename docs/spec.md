@@ -136,13 +136,23 @@ Phase numbers refer to §6.
   the browser. The owner reads the listings and types an expected sell price, which feeds the
   `sell` statement (profit, margin, P(loss)).
 - **"Buy vs craft":** for a pasted listing, its crafting cost against the asking price.
-- **How the link is built:** the trade site accepts a JSON query in the URL
-  (`/trade/search/<League>?q=<json>`). Stat filters need trade stat IDs, which come from
-  `https://www.pathofexile.com/api/trade/data/stats` (fetched once per league and mapped to our
-  mods by text). Resistances use the site's pseudo stats.
-  - **To verify:** that the `?q=` form still works.
-  - **To verify:** that the text-to-ID mapping covers elevated and hybrid mods.
-  - **Expected difficulty:** moderate. The mapping is the work; the link itself is easy.
+- **How the link is built (tested 2026-11-18 in the owner's logged-in browser):**
+  - The trade page keeps the whole search in its URL: `/trade/search/<League>/<code>`, where
+    `<code>` is the query JSON (the `query` object), gzip-compressed and base64url-encoded.
+    A generated link opened in the normal trade page with every filter filled in.
+  - Stat IDs come from `/api/trade/data/stats` (about 7,900 explicit, 300 pseudo, 290 crafted).
+    The site's text differs from game data, e.g. "You can apply # additional Curses"
+    (`explicit.stat_30642521`), "Socketed Attacks have +# to Total Mana Cost"
+    (`explicit.stat_2264586521`, value −20), "Attacks have +#% to Critical Strike Chance"
+    (`explicit.stat_2572042788`). The mapping matches our mods' stats and values to these
+    templates rather than relying on exact text.
+  - Elevated mods have no separate trade stat; they're found by value (elevated crit = min 1.6).
+    The hybrid elevated line "Ignore Stuns while using Socketed Attack Skills" only exists on
+    the site as a %-chance version, so links filter on the item's other line instead.
+  - **Status filter:** `online` returns nothing in Covens; `securable` (instant buyout /
+    merchant) and `available` work. Links default to `securable`.
+  - Live check, elevated-crit Royal Plate with curse and −20 mana cost: 44 listed, cheapest
+    18, 18, 19, 19, 19, 20 divine.
 
 ### I. Rules panel and confirmation workflow (phase 1)
 - Every rule has an id, a description, a source and a status: **verified (source)**,
@@ -204,7 +214,7 @@ except where it's known to be wrong.
 
 | # | Question | Why it matters |
 |---|---|---|
-| Q1 | **Partial suffix locks** ("1/2 Suffix Modifier(s) cannot be changed"): can they only be crafted when the item has ≤ N suffixes, or anytime? Which suffixes do they protect (all existing ones, or N chosen at random)? Do they take a prefix slot like the full lock? Does a reforge consume them? | The gamble strategies, and the cost of every locked reforge on items with fewer than 3 suffixes |
+| Q1 | **Partial suffix locks — answered by the owner 2026-11-18:** they can always be crafted; they protect exactly N suffixes; they take a prefix slot like the full lock; a reforge consumes them. **Still open:** when the item has more than N suffixes, which N are protected (random, or the player's choice)? | Gamble strategies, and the cost of every locked reforge on items with fewer than 3 suffixes |
 | Q2 | Can a locked reforge **add** new mods into open slots on the locked side? (Sanavixx's boots method implies yes; your rule says the protected side is untouched.) | Whether "fill the suffixes first" matters, and the Sanavixx boots route |
 | Q3 | How many new mods does a locked reforge roll? (Model: totals 4/5/6 with weights 8/3/1, at least one new mod.) | The 0–2 extra-prefix odds and how often prefixes end up full |
 | Q4 | Rare mod count when rerolling: 4/5/6 = 8/3/1? | Every reroll and Awakener fill |
