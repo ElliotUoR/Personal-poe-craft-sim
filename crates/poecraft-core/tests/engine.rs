@@ -60,7 +60,7 @@ fn chest_pieces_need_two_dominance_each() {
     let pr = prices();
     for f in ["chest_hunter_piece", "chest_warlord_piece"] {
         let prog = parse_file(&root().join(format!("recipes/{f}.craft"))).unwrap();
-        let rep = analyse(gd, &pr, &prog, &Options { runs: 2000, mode: Mode::Exact, seed: 0, exact_seconds: 60 }).unwrap();
+        let rep = analyse(gd, &pr, &prog, &Options { runs: 2000, mode: Mode::Exact, seed: 0, exact_seconds: 60, progress: None }).unwrap();
         let dom = rep.mean_counts["dominance"];
         assert!((dom - 2.0).abs() < 0.05, "{f}: {dom} Dominance");
     }

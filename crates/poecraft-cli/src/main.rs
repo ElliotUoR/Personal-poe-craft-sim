@@ -54,6 +54,69 @@ impl Args {
     }
 }
 
+/// Progress bar on stderr (only when stderr is a terminal and --json/--quiet are not given).
+struct ProgressBar {
+    state: std::sync::Arc<poecraft_core::analysis::Progress>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl ProgressBar {
+    fn start(args: &Args, label: &str) -> Option<ProgressBar> {
+        use std::io::IsTerminal;
+        if args.flag("--json") || args.flag("--quiet") || (!std::io::stderr().is_terminal() && !args.flag("--progress")) {
+            return None;
+        }
+        let state = std::sync::Arc::new(poecraft_core::analysis::Progress::default());
+        *state.label.lock().unwrap() = label.to_string();
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (s2, st2) = (state.clone(), stop.clone());
+        let handle = std::thread::spawn(move || {
+            use std::io::Write;
+            use std::sync::atomic::Ordering::Relaxed;
+            let t0 = std::time::Instant::now();
+            let spin = ['|', '/', '-', '\\'];
+            let mut k = 0;
+            let (mut last_phase, mut tp) = (String::new(), std::time::Instant::now());
+            while !st2.load(Relaxed) {
+                let (done, total) = (s2.done.load(Relaxed), s2.total.load(Relaxed));
+                let phase = s2.phase.lock().unwrap().clone();
+                if phase != last_phase {
+                    last_phase = phase.clone();
+                    tp = std::time::Instant::now(); // ETA per phase
+                }
+                let label = s2.label.lock().unwrap().clone();
+                let el = t0.elapsed().as_secs_f64();
+                let pel = tp.elapsed().as_secs_f64();
+                let line = if total > 0 {
+                    let f = done as f64 / total as f64;
+                    let w = 30;
+                    let fill = (f * w as f64) as usize;
+                    let eta = if done > 0 { pel / f - pel } else { 0.0 };
+                    format!("{label} {phase} [{}{}] {:5.1}% {done}/{total}  {el:.1}s  eta {eta:.1}s", "#".repeat(fill), "-".repeat(w - fill), f * 100.0)
+                } else {
+                    format!("{label} {} {phase}...  {el:.1}s", spin[k % 4])
+                };
+                eprint!("\r{line:<100}");
+                let _ = std::io::stderr().flush();
+                k += 1;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            eprint!("\r{:<100}\r", "");
+        });
+        Some(ProgressBar { state, stop, handle: Some(handle) })
+    }
+}
+
+impl Drop for ProgressBar {
+    fn drop(&mut self) {
+        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        if let Some(h) = self.handle.take() {
+            let _ = h.join();
+        }
+    }
+}
+
 fn influences(s: Option<String>) -> Result<Influences> {
     let mut infl = Influences::default();
     if let Some(s) = s {
@@ -100,6 +163,7 @@ fn real_main() -> Result<()> {
             mode: a.val("--mode").map(|s| Mode::parse(&s).ok_or_else(|| anyhow!("bad --mode {s}"))).transpose()?.unwrap_or(Mode::Auto),
             seed: a.val("--seed").map(|s| s.parse()).transpose()?.unwrap_or(0),
             exact_seconds: a.val("--exact-seconds").map(|s| s.parse()).transpose()?.unwrap_or(10),
+            progress: None,
         })
     };
     match cmd.as_str() {
@@ -107,7 +171,12 @@ fn real_main() -> Result<()> {
             let pos = args.positional();
             let path = pos.first().ok_or_else(|| anyhow!("run needs a recipe file"))?;
             let prog = parse_file(Path::new(path))?;
-            let rep = analyse(gd, &prices, &prog, &opts(&args)?)?;
+            let mut o = opts(&args)?;
+            let bar = ProgressBar::start(&args, &prog.name);
+            o.progress = bar.as_ref().map(|b| b.state.clone());
+            let rep = analyse(gd, &prices, &prog, &o);
+            drop(bar);
+            let rep = rep?;
             if args.flag("--json") {
                 println!("{}", serde_json::to_string_pretty(&rep)?);
             } else {
@@ -120,11 +189,16 @@ fn real_main() -> Result<()> {
             }
         }
         "compare" => {
-            let o = opts(&args)?;
+            let mut o = opts(&args)?;
+            let files = args.positional();
             let mut reps: Vec<Report> = vec![];
-            for p in args.positional() {
-                let prog = parse_file(Path::new(&p))?;
-                reps.push(analyse(gd, &prices, &prog, &o)?);
+            for (k, p) in files.iter().enumerate() {
+                let prog = parse_file(Path::new(p))?;
+                let bar = ProgressBar::start(&args, &format!("[{}/{}] {}", k + 1, files.len(), prog.name));
+                o.progress = bar.as_ref().map(|b| b.state.clone());
+                let r = analyse(gd, &prices, &prog, &o);
+                drop(bar);
+                reps.push(r?);
             }
             match args.val("--sort").as_deref().unwrap_or("cost_per_success") {
                 "cost_per_success" => reps.sort_by(|a, b| a.cost_per_success.partial_cmp(&b.cost_per_success).unwrap()),

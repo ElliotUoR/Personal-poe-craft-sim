@@ -178,6 +178,14 @@ Phase numbers refer to §6.
 - Odds panel: the outcome distribution of each action before you click.
 - "Save session as recipe", which can then be simulated.
 
+### M. Progress bars (owner request, 2026-11-18)
+- Every long computation shows live progress: simulations (runs done / total, ETA), exact solves
+  (spinner + elapsed), comparisons ("recipe k of n"), PoB scoring (items scored / total) and the
+  reverse-engineering search.
+- The engine exposes one shared progress object (`analysis::Progress`: phase, done, total,
+  label). The CLI draws it on stderr (`--progress` forces it, `--quiet` hides it); the web app
+  will stream the same object to the browser (server-sent events) and draw a bar.
+
 ## 5. Mechanics coverage
 Already in the Python engine: basic currency, conqueror exalts, Dominance, Awakener, Harvest
 reforges (respecting and consuming metamods), essences, bench including metamods, beastcrafts

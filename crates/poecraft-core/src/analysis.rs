@@ -100,6 +100,13 @@ struct RunRec {
 }
 
 pub fn mc_stats(gd: &GameData, prices: &Prices, prog: &Program, runs: usize, seed: u64, used: &mut crate::rules::RuleUse) -> Result<Stats, RecipeError> {
+    mc_stats_p(gd, prices, prog, runs, seed, used, None)
+}
+
+pub fn mc_stats_p(gd: &GameData, prices: &Prices, prog: &Program, runs: usize, seed: u64, used: &mut crate::rules::RuleUse, progress: Option<&Progress>) -> Result<Stats, RecipeError> {
+    if let Some(p) = progress {
+        p.start("monte carlo", runs);
+    }
     let sw = Engine::switches_for(prog)?;
     let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).min(runs.max(1));
     let results: Vec<Result<(Vec<RunRec>, crate::rules::RuleUse), RecipeError>> = std::thread::scope(|sc| {
@@ -112,6 +119,9 @@ pub fn mc_stats(gd: &GameData, prices: &Prices, prog: &Program, runs: usize, see
                     let mut have_example = false;
                     while i < runs {
                         let r = eng.run_mc(prog, seed.wrapping_mul(1_000_003).wrapping_add(i as u64), 200_000, None)?;
+                        if let Some(p) = progress {
+                            p.tick();
+                        }
                         let total: f64 = r.costs.iter().map(|(k, v)| prices.get(k) * v).sum();
                         let lost = r.costs.iter().find(|x| x.0 == LOST).map(|x| x.1).unwrap_or(0.0);
                         let example = if r.success && !have_example {
@@ -226,11 +236,36 @@ pub struct Options {
     pub mode: Mode,
     pub seed: u64,
     pub exact_seconds: u64,
+    /// Live progress for a UI (CLI bar now, web app later). None = no reporting.
+    pub progress: Option<std::sync::Arc<Progress>>,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Options { runs: 2000, mode: Mode::Auto, seed: 0, exact_seconds: 10 }
+        Options { runs: 2000, mode: Mode::Auto, seed: 0, exact_seconds: 10, progress: None }
+    }
+}
+
+/// Shared progress state, updated by the workers and read by whoever draws the bar.
+#[derive(Debug, Default)]
+pub struct Progress {
+    pub done: std::sync::atomic::AtomicUsize,
+    pub total: std::sync::atomic::AtomicUsize,
+    /// Current phase, e.g. "exact solve" or "monte carlo".
+    pub phase: std::sync::Mutex<String>,
+    /// Which recipe (for compare).
+    pub label: std::sync::Mutex<String>,
+}
+
+impl Progress {
+    pub fn start(&self, phase: &str, total: usize) {
+        use std::sync::atomic::Ordering::Relaxed;
+        *self.phase.lock().unwrap() = phase.to_string();
+        self.total.store(total, Relaxed);
+        self.done.store(0, Relaxed);
+    }
+    pub fn tick(&self) {
+        self.done.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
@@ -241,6 +276,9 @@ pub fn analyse(gd: &GameData, prices: &Prices, prog: &Program, opt: &Options) ->
     let mut note = None;
     if matches!(opt.mode, Mode::Auto | Mode::Exact | Mode::Both) {
         let budget = Budget { paths: 300_000, states: 20_000, deadline: Instant::now() + Duration::from_secs(opt.exact_seconds) };
+        if let Some(p) = &opt.progress {
+            p.start("exact solve", 0);
+        }
         match exact_stats(gd, prices, prog, budget, &mut used)? {
             Ok(s) => ex = Some(s),
             Err(m) => {
@@ -251,7 +289,7 @@ pub fn analyse(gd: &GameData, prices: &Prices, prog: &Program, opt: &Options) ->
             }
         }
     }
-    let mc = if matches!(opt.mode, Mode::Mc | Mode::Both | Mode::Auto) || ex.is_none() { Some(mc_stats(gd, prices, prog, opt.runs, opt.seed, &mut used)?) } else { None };
+    let mc = if matches!(opt.mode, Mode::Mc | Mode::Both | Mode::Auto) || ex.is_none() { Some(mc_stats_p(gd, prices, prog, opt.runs, opt.seed, &mut used, opt.progress.as_deref())?) } else { None };
     let agreement = match (&ex, &mc) {
         (Some(e), Some(m)) => Some(check_agreement(e, m, 4.0).1),
         _ => note,
