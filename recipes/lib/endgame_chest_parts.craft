@@ -1,6 +1,7 @@
 # Building blocks for the Sanavixx "Endgame Chest" (Astral Plate, Hunter + Warlord).
 # Used by recipes/endgame_chest*.craft.
 include "elevate.craft"
+include "merge.craft"
 
 # Step 1: Warlord piece -> magic Astral Plate with ONLY the elevated
 # "Socketed Attacks have -20 to Total Mana Cost / Ignore Stuns ..." suffix. Set aside as `warlord`.
@@ -14,6 +15,15 @@ def warlord_piece() {
     } until has "Warlord: mana cost" elevated and suffix_count == 1 and open_prefix >= 1
     beastcraft lock_suffixes
     scour
+    set_aside warlord
+}
+
+# Step 1 (lean): the Awakener rerolls every non-kept mod of BOTH items, so other suffixes,
+# the suffix lock and the scour only matter if you want a MAGIC item for Hinekora's Lock.
+# Without the preview, any rare with the elevated mana mod as its only influenced mod works.
+def warlord_piece_lean() {
+    buy "Astral Plate" ilvl 86 influence warlord for price "base:astral_plate_warlord_86"
+    elevate_warlord("Warlord: mana cost")
     set_aside warlord
 }
 
@@ -46,14 +56,8 @@ def merge_with_preview() {
     make_room_for_lock()
 }
 
-# The "Suffixes cannot be changed" metamod is a PREFIX, so we need an open prefix.
-# Fallback if the Awakener rolled 3 prefixes: beastcraft "Add a Suffix, Remove a Random
-# Prefix" if a suffix is open, otherwise Orb of Annulment (may hit an elevated suffix).
 def make_room_for_lock() {
-    until open_prefix >= 1 or not has "Warlord: mana cost" elevated or not has "Hunter: attack crit" elevated {
-        if open_suffix >= 1 { beastcraft add_suffix_remove_prefix } else { annul }
-    }
-    if open_prefix == 0 { fail "lost an elevated mod while making room for the metamod" }
+    make_room_for_suffix_lock("Warlord: mana cost", "Hunter: attack crit")
 }
 
 # Step 4: lock suffixes + Harvest reforge Caster. "You can apply an additional Curse" is

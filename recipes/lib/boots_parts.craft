@@ -1,0 +1,37 @@
+# Building blocks for Hunter + Redeemer boots with elevated Tailwind + elevated Onslaught,
+# Elusive and Movement Speed (blind test, see docs/blind-test-boots.md).
+include "elevate.craft"
+include "merge.craft"
+
+# Hunter piece: Tailwind has a single tier, so the first upgrade makes it Elevated.
+def tailwind_piece() {
+    buy "Two-Toned Boots" ilvl 84 influence hunter for price "base:boots_hunter_75"
+    elevate_hunter("Hunter: tailwind")
+    set_aside hunter
+}
+
+# Redeemer piece: needs T1 Onslaught (ilvl 80+) before Dominance can elevate it.
+def onslaught_piece() {
+    buy "Two-Toned Boots" ilvl 84 influence redeemer for price "base:boots_redeemer_80"
+    elevate_redeemer("Redeemer: onslaught")
+}
+
+# Both pieces -> one rare with the two elevated suffixes and an open prefix.
+def merged_boots() {
+    tailwind_piece()
+    onslaught_piece()
+    awaken hunter
+    make_room()
+}
+
+def make_room() {
+    make_room_for_suffix_lock("Hunter: tailwind", "Redeemer: onslaught")
+}
+
+# Locked reforge "Critical": Elusive is the ONLY critical-tagged prefix on
+# Hunter/Redeemer boots (RePoE 3.30), so it is guaranteed.
+def crit_reforge() {
+    make_room()
+    beastcraft lock_suffixes
+    harvest reforge critical
+}

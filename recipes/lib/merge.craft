@@ -1,0 +1,12 @@
+# Helpers for the "two elevated suffixes + locked reforge for the prefixes" pattern.
+
+# After an Awakener's Orb: make sure there is an open prefix for the
+# "Suffixes Cannot Be Changed" metamod (which is itself a PREFIX).
+# Uses "Add a Suffix, Remove a Random Prefix" if a suffix is open, else Orb of
+# Annulment (which can hit one of the elevated suffixes: that risk is simulated).
+def make_room_for_suffix_lock(mod_a, mod_b) {
+    until open_prefix >= 1 or not has mod_a elevated or not has mod_b elevated {
+        if open_suffix >= 1 { beastcraft add_suffix_remove_prefix } else { annul }
+    }
+    if open_prefix == 0 { fail "lost an elevated mod while making room for the metamod" }
+}

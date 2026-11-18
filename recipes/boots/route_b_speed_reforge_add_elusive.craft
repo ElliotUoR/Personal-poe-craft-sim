@@ -1,0 +1,17 @@
+# Route B: same two elevated suffixes, but lock suffixes + Harvest reforge Speed
+# (movement speed is the only speed-tagged prefix, so it is guaranteed), then try the
+# cheap "Add a Mod to a Redeemer Item" beastcraft for Elusive in the open prefix.
+# On a miss: re-lock and reforge Speed again.
+include "../lib/boots_parts.craft"
+
+merged_boots()
+repeat limit 60 {
+    make_room()
+    beastcraft lock_suffixes
+    harvest reforge speed
+    if open_prefix >= 1 { beastcraft add_mod redeemer }
+} until has "Redeemer: elusive"
+
+goal has "Hunter: tailwind" elevated and has "Redeemer: onslaught" elevated and has "Redeemer: elusive" and (has "movement speed" or has "bench movement speed")
+track "natural movement speed" has "movement speed"
+track "natural movement speed 30%+" has "movement speed" tier <= 3

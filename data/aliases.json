@@ -1,14 +1,15 @@
 {
-  "_doc": "Friendly mod names -> RePoE mod id (any tier of the family). Keys are case-insensitive. Add your own.",
-  "Hunter: additional curse": "AdditionalCurseOnEnemiesInfluence1",
-  "Hunter: attack crit": "AdditionalCritWithAttacksInfluence2_",
-  "Hunter: spell crit": "AdditionalCritWithSpellsInfluence2",
-  "Hunter: max life %": "MaximumLifeBodyInfluence2_",
-  "Warlord: mana cost": "SocketedAttacksManaCostInfluence1",
-  "Warlord: socketed attacks mana cost": "SocketedAttacksManaCostInfluence1",
-  "Hunter: tailwind": "TailwindOnCriticalStrikeInfluence1",
-  "Redeemer: onslaught": "OnslaughtOnKillInfluence2_",
-  "Redeemer: elusive": "ElusiveOnCriticalStrikeInfluence1",
-  "flat life": "IncreasedLife10",
-  "movement speed": "MovementVelocity5"
+ "_doc": "Friendly mod names -> RePoE mod id (any tier of the family). Keys are case-insensitive. Add your own.",
+ "Hunter: additional curse": "AdditionalCurseOnEnemiesInfluence1",
+ "Hunter: attack crit": "AdditionalCritWithAttacksInfluence2_",
+ "Hunter: spell crit": "AdditionalCritWithSpellsInfluence2",
+ "Hunter: max life %": "MaximumLifeBodyInfluence2_",
+ "Warlord: mana cost": "SocketedAttacksManaCostInfluence1",
+ "Warlord: socketed attacks mana cost": "SocketedAttacksManaCostInfluence1",
+ "Hunter: tailwind": "TailwindOnCriticalStrikeInfluence1",
+ "Redeemer: onslaught": "OnslaughtOnKillInfluence2_",
+ "Redeemer: elusive": "ElusiveOnCriticalStrikeInfluence1",
+ "flat life": "IncreasedLife10",
+ "movement speed": "MovementVelocity5",
+ "bench movement speed": "EinharMasterMovementVelocity3"
 }

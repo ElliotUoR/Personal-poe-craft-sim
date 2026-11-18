@@ -66,7 +66,9 @@ class Mod:
     def family_key(self):
         # Mod "type" separates different mods sharing a group (e.g. +1 support gems vs
         # +2 cold gems); elevated versions carry the same type + "Maven" suffix.
-        return (self.gen, self.group, self.influence, re.sub(r"(Influence)?Maven(V\d+)?_*$", "", self.type))
+        # Crafted (bench) mods form their own families so `has` can tell them apart.
+        return (self.gen, self.group, "crafted" if self.crafted else self.influence,
+                re.sub(r"(Influence)?Maven(V\d+)?_*$", "", self.type))
 
     def short(self):
         return self.text.replace("\n", " / ")

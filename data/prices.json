@@ -9,7 +9,9 @@
   "armourer_scrap": "placeholder",
   "base:astral_plate_warlord_86": "most expensive Warlord-only Astral Plate base variant (279.9c); item level not shown, assumed 86",
   "base:astral_plate_hunter_86": "most expensive Hunter-only Astral Plate variant (400c); assumed ilvl 86",
-  "base:astral_plate_hunter_84": "a cheaper Hunter-only Astral Plate variant (40.5c); assumed ilvl 84"
+  "base:astral_plate_hunter_84": "a cheaper Hunter-only Astral Plate variant (40.5c); assumed ilvl 84",
+  "base:boots_hunter_75": "normal Hunter boots, any base, ilvl 75+: single-influence boot bases list at 1-4c on outof.games (ilvl not shown); 5c assumed",
+  "base:boots_redeemer_80": "normal Redeemer boots, any base, ilvl 80+ (T1 Onslaught needs ilvl 80): 10c assumed"
  },
  "prices": {
   "alch": 0.025,
@@ -218,6 +220,8 @@
   "vaal": 0.665,
   "veiled_chaos": 8.51,
   "veiled_exalt": 620.0,
-  "warlord_exalt": 180.0
+  "warlord_exalt": 180.0,
+  "base:boots_hunter_75": 5.0,
+  "base:boots_redeemer_80": 10.0
  }
 }

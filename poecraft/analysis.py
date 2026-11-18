@@ -116,7 +116,7 @@ def exact_stats(engine: Engine, prog: Program, **budget):
             "n_outcomes": len(r.outcomes)}
 
 
-def analyse(engine: Engine, prog: Program, runs=2000, mode="auto", seed=0, name=None):
+def analyse(engine: Engine, prog: Program, runs=2000, mode="auto", seed=0, name=None, exact_seconds=30):
     """mode: auto (exact if small enough, plus MC cross-check), exact, mc, both."""
     engine.prices.missing.clear()
     name = name or prog.name
@@ -124,7 +124,7 @@ def analyse(engine: Engine, prog: Program, runs=2000, mode="auto", seed=0, name=
     exact_note = None
     if mode in ("auto", "exact", "both"):
         try:
-            ex = exact_stats(engine, prog)
+            ex = exact_stats(engine, prog, max_seconds=exact_seconds)
         except ExactTooLarge as e:
             if mode in ("exact",):
                 raise

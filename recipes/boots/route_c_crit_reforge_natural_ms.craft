@@ -1,0 +1,12 @@
+# Route C: like Route A but insists on a NATURAL movement speed prefix (no bench craft):
+# keep re-locking + reforging Critical until movement speed rolls next to Elusive.
+include "../lib/boots_parts.craft"
+
+merged_boots()
+repeat limit 60 {
+    crit_reforge()
+} until has "movement speed"
+
+goal has "Hunter: tailwind" elevated and has "Redeemer: onslaught" elevated and has "Redeemer: elusive" and (has "movement speed" or has "bench movement speed")
+track "natural movement speed" has "movement speed"
+track "natural movement speed 30%+" has "movement speed" tier <= 3

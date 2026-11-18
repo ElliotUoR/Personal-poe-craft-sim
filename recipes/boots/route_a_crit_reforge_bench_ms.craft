@@ -1,0 +1,16 @@
+# Route A: elevate Tailwind (Hunter piece) and Onslaught (Redeemer piece) with Dominance,
+# merge with Awakener, lock suffixes + Harvest reforge Critical (guaranteed Elusive),
+# then bench-craft 20-24% Movement Speed in the open prefix (4 chaos). If the reforge
+# filled all prefixes without movement speed, re-lock and reforge again.
+include "../lib/boots_parts.craft"
+
+merged_boots()
+crit_reforge()
+until has "movement speed" or open_prefix >= 1 limit 20 {
+    crit_reforge()
+}
+if not has "movement speed" and open_prefix >= 1 { craft "EinharMasterMovementVelocity3" }
+
+goal has "Hunter: tailwind" elevated and has "Redeemer: onslaught" elevated and has "Redeemer: elusive" and (has "movement speed" or has "bench movement speed")
+track "natural movement speed" has "movement speed"
+track "natural movement speed 30%+" has "movement speed" tier <= 3
