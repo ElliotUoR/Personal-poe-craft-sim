@@ -35,7 +35,12 @@ fn lock(item: &Item, kind: MetaKind) -> Item {
 fn outcomes(f: impl FnMut(&mut dyn Chooser) -> Item) -> HashMap<Item, f64> {
     let mut out = HashMap::new();
     let mut budget = 1_000_000;
-    enumerate(f, &mut budget, |it, p| *out.entry(it).or_insert(0.0) += p).ok().unwrap();
+    enumerate(f, &mut budget, |it, p| {
+        *out.entry(it).or_insert(0.0) += p;
+        true
+    })
+    .ok()
+    .unwrap();
     out
 }
 

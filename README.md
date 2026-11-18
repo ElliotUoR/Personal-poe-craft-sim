@@ -8,17 +8,36 @@ Small cases are computed **exactly** (enumeration plus absorbing Markov chains).
 The tool is meant to be driven by Claude: you describe a craft in plain English, Claude writes a
 recipe, runs it, and compares alternatives.
 
+There are two engines with the same recipe language and commands:
+
+* **Rust (main engine, phase 1 of [docs/spec.md](docs/spec.md))**: `crates/`. Monte Carlo runs on
+  every CPU core and is roughly 300x faster than Python (8,000 chest runs in about 0.4 s).
+* **Python (reference)**: `poecraft/`. It stays as the cross-check until the Rust results have
+  matched it on every recipe for a while (`tools/parity_engine.py`, `tools/parity_data.py`).
+
 ```
-pip install numpy pytest            # only runtime dependency: numpy
+cargo build --release                         # Rust 1.80+; binary: target/release/poecraft
+target/release/poecraft run recipes/endgame_chest.craft
+target/release/poecraft compare recipes/boots/*.craft
+target/release/poecraft rules                 # every rule with its source and status
+cargo test --release                          # Rust tests
+
+pip install numpy pytest                      # Python reference
 python -m poecraft run recipes/endgame_chest.craft
-python -m poecraft compare recipes/endgame_chest*.craft
 python -m pytest -q
+python tools/parity_engine.py                 # Rust vs Python on every recipe
 ```
+
+Every Rust result lists the unverified or disputed rules it depends on (see `poecraft rules`
+and docs/spec.md §7). Rust-only additions so far: partial locks (`craft lock_1_suffix`,
+`lock_2_suffixes`, `lock_1_prefix`, `lock_2_prefixes`), "cannot roll attack/caster modifiers"
+(`craft no_attack_mods` / `no_caster_mods`), metamods for every item class, and all item classes
+(armour, weapons, jewellery, quivers, shields, jewels, flasks, tinctures).
 
 ## Commands
 | command | what it does |
 | --- | --- |
-| `run RECIPE [--runs N] [--mode auto/exact/mc/both] [--json] [--show-item]` | Evaluate one recipe. `auto` tries exact first (90 s budget) and falls back to Monte Carlo. `both` reports both plus an agreement check. |
+| `run RECIPE [--runs N] [--mode auto/exact/mc/both] [--json] [--show-item]` | Evaluate one recipe. `auto` tries exact first (Rust: 10 s / 300k paths; Python: 90 s) and falls back to Monte Carlo. `both` reports both plus an agreement check. |
 | `compare R1 R2 ... [--sort cost_per_success/mean/risk/std] [-v] [--json]` | Rank recipes against the same prices. |
 | `sample RECIPE [--seed S]` | Run once, print the final item, the cost and any `show` output. |
 | `check RECIPE` | Parse and run 20 times to catch errors quickly. |

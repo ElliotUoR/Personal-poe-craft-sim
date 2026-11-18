@@ -206,8 +206,8 @@ pub struct FamilyKey {
 #[derive(Debug, Clone)]
 pub struct Family {
     pub key: FamilyKey,
-    /// Bench-crafted family: reachable by id/alias only, not by free-text search
-    /// (same as the Python reference).
+    /// Bench-crafted (or veiled placeholder) family: reachable by id/alias only, not by
+    /// free-text search (same as the Python reference).
     pub crafted: bool,
     /// All natural tiers across every item class, best (highest level) first.
     pub tiers: Vec<ModIdx>,
@@ -525,13 +525,13 @@ impl GameData {
     fn build_families(&mut self) {
         let mut fams: BTreeMap<FamilyKey, Family> = BTreeMap::new();
         for (i, m) in self.mods.iter().enumerate() {
-            if m.domain == "veiled" || m.gen == Gen::Other || m.typ.starts_with("OLD") {
+            if m.gen == Gen::Other || m.typ.starts_with("OLD") {
                 continue;
             }
             let key = self.raw_family_key(m);
-            let crafted = m.crafted;
+            let crafted = m.crafted || m.domain == "veiled";
             let fam = fams.entry(key.clone()).or_insert_with(|| Family { key, crafted, tiers: vec![], elevated: None });
-            if m.crafted {
+            if crafted {
                 fam.tiers.push(i as ModIdx);
                 continue;
             }

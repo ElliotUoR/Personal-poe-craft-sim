@@ -32,16 +32,16 @@ impl Chooser for Replay<'_> {
     }
 }
 
-/// Call `f` once per outcome path; `visit(result, probability)` receives each.
-/// Returns Err(TooLarge) when more than `budget` paths would be needed.
-pub fn enumerate<R>(mut f: impl FnMut(&mut dyn Chooser) -> R, budget: &mut u64, mut visit: impl FnMut(R, f64)) -> Result<(), TooLarge> {
+/// Call `f` once per outcome path; `visit(result, probability)` receives each and returns
+/// false to stop early. Returns Err(TooLarge) when more than `budget` paths would be needed
+/// or the visitor stopped.
+pub fn enumerate<R>(mut f: impl FnMut(&mut dyn Chooser) -> R, budget: &mut u64, mut visit: impl FnMut(R, f64) -> bool) -> Result<(), TooLarge> {
     let mut prefix: Vec<usize> = Vec::new();
     loop {
         let mut ch = Replay { prefix: &prefix, trail: Vec::new() };
         let r = f(&mut ch);
         let p: f64 = ch.trail.iter().map(|(i, probs)| probs[*i]).product();
-        visit(r, p);
-        if *budget == 0 {
+        if !visit(r, p) || *budget == 0 {
             return Err(TooLarge);
         }
         *budget -= 1;
