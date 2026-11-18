@@ -64,7 +64,8 @@ Results: 2000 Monte Carlo runs each, prices from outof.games (Covens league) fet
 
 | recipe | success | expected cost | cost per success | std | p90 | P(life prefix) |
 | --- | --- | --- | --- | --- | --- | --- |
-| endgame_chest_no_retry | 97.7% | **12.7 div** | 13.0 div | 4.0 div | 18.1 div | 2.5% |
+| endgame_chest_lean (own variant: skip the lock+scour step, no retries) | 97.2% | **11.0 div** | 11.3 div | 3.6 div | 15.8 div | ~2.5% |
+| endgame_chest_no_retry | 97.7% | 12.7 div | 13.0 div | 4.0 div | 18.1 div | 2.5% |
 | endgame_chest (as written, ≤10 life retries) | 97.7% | 18.5 div | 18.9 div | 5.9 div | 25.6 div | 13.3% |
 | endgame_chest_hinekora | 100% | 20.3 div | 20.3 div | 5.8 div | 27.4 div | 13.1% |
 
@@ -72,7 +73,9 @@ With the prices you gave (divine 156 etc., `--prices data/prices_user_mid_nov_20
 20.8 / 23.2 div.
 
 **Compared with the ~17 div market price:** crafting the core item yourself (no life retries) is
-expected to cost ~13 div, with a p90 of ~18 div. Retrying the reforge for a life prefix
+expected to cost ~13 div (p90 ~18 div), or ~11 div with the lean variant. The Awakener rerolls
+every non-kept mod, so the Warlord piece's "no other suffixes + lock + scour → magic" step only
+pays off if you use Hinekora's preview. Retrying the reforge for a life prefix
 costs ~6 div more, because every retry costs a Wild Bristle Matron (~215c) and it only lifts
 P(life) from 2.5% to 13%. On these numbers you should not retry. Buying a finished item at
 17 div is roughly break-even with the p75 of crafting.
