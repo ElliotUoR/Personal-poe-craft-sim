@@ -14,6 +14,7 @@
 //!   GET  /api/jobs/{id}                  progress (phase, done, total, label) and result
 //!   GET  /api/rules                      rules registry
 //!   GET  /api/prices                     price table and its metadata
+//!   POST /api/prices/fetch               run tools/fetch_prices.py (poe.ninja) and reload
 
 use anyhow::{anyhow, Result};
 use axum::extract::{Path as AxPath, Query, State};
@@ -40,7 +41,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone)]
 struct App {
     gd: &'static GameData,
-    prices: Arc<Prices>,
+    prices: Arc<std::sync::RwLock<Arc<Prices>>>,
     root: PathBuf,
     jobs: Arc<Mutex<HashMap<u64, Job>>>,
     next: Arc<AtomicU64>,
@@ -64,6 +65,12 @@ impl<E: std::fmt::Display> From<E> for ApiError {
     }
 }
 type ApiResult<T> = Result<Json<T>, ApiError>;
+
+impl App {
+    fn prices(&self) -> Arc<Prices> {
+        self.prices.read().unwrap().clone()
+    }
+}
 
 // ------------------------------------------------------------------ item DTOs
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -140,7 +147,7 @@ async fn meta(State(app): State<App>) -> Json<Value> {
     Json(json!({
         "source": gd.source, "classes": classes,
         "influences": Influence::ALL.iter().map(|i| i.name()).collect::<Vec<_>>(),
-        "prices": app.prices.meta, "divine": app.prices.divine(),
+        "prices": app.prices().meta, "divine": app.prices().divine(),
     }))
 }
 
@@ -326,7 +333,7 @@ fn report_json(r: &Report, prices: &Prices) -> Value {
 
 async fn job_run(State(app): State<App>, Json(r): Json<RunReq>) -> ApiResult<Value> {
     let prog = parse_recipe(&app, &r.recipe).map_err(|e| ApiError(StatusCode::BAD_REQUEST, e))?;
-    let (gd, prices, runs, mode) = (app.gd, app.prices.clone(), r.runs, r.mode.clone());
+    let (gd, prices, runs, mode) = (app.gd, app.prices(), r.runs, r.mode.clone());
     let id = start_job(&app, prog.name.clone(), move |p| {
         let o = options(runs, &mode, p)?;
         let rep = analyse(gd, &prices, &prog, &o).map_err(|e| e.to_string())?;
@@ -340,7 +347,7 @@ async fn job_compare(State(app): State<App>, Json(r): Json<CompareReq>) -> ApiRe
     for x in &r.recipes {
         progs.push(parse_recipe(&app, x).map_err(|e| ApiError(StatusCode::BAD_REQUEST, e))?);
     }
-    let (gd, prices, runs, mode) = (app.gd, app.prices.clone(), r.runs, r.mode.clone());
+    let (gd, prices, runs, mode) = (app.gd, app.prices(), r.runs, r.mode.clone());
     let n = progs.len();
     let id = start_job(&app, format!("compare {n} recipes"), move |p| {
         let mut reps = vec![];
@@ -381,7 +388,30 @@ async fn rules() -> Json<Value> {
 }
 
 async fn prices_handler(State(app): State<App>) -> Json<Value> {
-    Json(json!({ "meta": app.prices.meta, "prices": app.prices.table }))
+    let p = app.prices();
+    Json(json!({ "meta": p.meta, "prices": p.table }))
+}
+
+/// Run the poe.ninja fetcher (Python, stdlib only) and reload the price table.
+async fn prices_fetch(State(app): State<App>) -> ApiResult<Value> {
+    let root = app.root.clone();
+    let out = tokio::task::spawn_blocking(move || {
+        let py = ["python", "py", "python3"].into_iter().find_map(|exe| {
+            std::process::Command::new(exe).arg("--version").output().ok().filter(|o| o.status.success()).map(|_| exe)
+        });
+        let exe = py.ok_or("Python is needed to fetch prices (tools/fetch_prices.py)")?;
+        std::process::Command::new(exe).arg(root.join("tools").join("fetch_prices.py")).current_dir(&root).output().map_err(|e| e.to_string().leak() as &str)
+    })
+    .await
+    .map_err(|e| ApiError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| ApiError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let log = String::from_utf8_lossy(&out.stderr).to_string();
+    if !out.status.success() {
+        return Err(ApiError(StatusCode::BAD_GATEWAY, format!("price fetch failed:\n{log}")));
+    }
+    let fresh = Prices::load(&app.gd.data_dir, &[], true).map_err(|e| ApiError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    *app.prices.write().unwrap() = Arc::new(fresh);
+    Ok(Json(json!({ "log": log, "meta": app.prices().meta })))
 }
 
 // ------------------------------------------------------------------ main
@@ -390,7 +420,7 @@ async fn main() -> Result<()> {
     let gd = default_data();
     let root = gd.data_dir.parent().map(|p| p.to_path_buf()).unwrap_or_default();
     let prices = Prices::load(&gd.data_dir, &[], true).map_err(|e| anyhow!(e))?;
-    let app = App { gd, prices: Arc::new(prices), root: root.clone(), jobs: Arc::new(Mutex::new(HashMap::new())), next: Arc::new(AtomicU64::new(1)) };
+    let app = App { gd, prices: Arc::new(std::sync::RwLock::new(Arc::new(prices))), root: root.clone(), jobs: Arc::new(Mutex::new(HashMap::new())), next: Arc::new(AtomicU64::new(1)) };
     let api = Router::new()
         .route("/api/meta", get(meta))
         .route("/api/bases", get(bases))
@@ -403,6 +433,7 @@ async fn main() -> Result<()> {
         .route("/api/jobs/{id}", get(job_get))
         .route("/api/rules", get(rules))
         .route("/api/prices", get(prices_handler))
+        .route("/api/prices/fetch", post(prices_fetch))
         .with_state(app);
     let web = tower_http::services::ServeDir::new(root.join("web"));
     let router = api.fallback_service(web);

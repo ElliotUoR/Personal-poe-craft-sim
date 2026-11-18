@@ -221,7 +221,12 @@ All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its
   Hunters_Exalted_Orb, Horticrafting, Bestiary_Recipe, Hinekoras_Lock, Veiled_Exalted_Orb.
   These embed the community wiki text. **poewiki.net returned HTTP 403** from this environment,
   so PoE Wiki was read only through PoEDB's copies.
-* **Prices**: [outof.games](https://outof.games/realms/pathofexile/economy/currency/) (poe.ninja
+* **Prices** (from 2026-11-18 evening): poe.ninja's PoE1 API, fetched by `python tools/fetch_prices.py`
+  or the web app's Prices tab. Currency, omens, essences and fossils come from the exchange
+  endpoint; beasts and base types (with item level and influence) from the stash endpoint. The
+  stash *currency* endpoint is not used (it said Divine 127.5c while the exchange said 226.2c).
+  Earlier prices came from [outof.games] (poe.ninja data shown on a web page).
+* **Prices (before)**: [outof.games](https://outof.games/realms/pathofexile/economy/currency/) (poe.ninja
   data) for currency, beasts, omens, essences and base types, **Covens** league. The
   poe.ninja API itself returned 404 on the old endpoint. Saved in `data/prices.json` with the
   date. Estimated entries (influenced bases, Omen of Blanching, "any rare beast") are listed

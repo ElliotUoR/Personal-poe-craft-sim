@@ -259,6 +259,17 @@ function renderPrices() {
   $("#priceBody").innerHTML = Object.entries(PRICES).filter(([k]) => !f || k.toLowerCase().includes(f)).map(([k, v]) => `<tr><td>${esc(k)}</td><td style="text-align:right">${fmt(v, 3)}c</td></tr>`).join("");
 }
 $("#priceFilter").addEventListener("input", renderPrices);
+$("#fetchPrices").addEventListener("click", async () => {
+  $("#fetchPrices").disabled = true;
+  $("#fetchMsg").textContent = "fetching from poe.ninja…";
+  try {
+    const r = await api("/api/prices/fetch", {});
+    $("#fetchMsg").textContent = r.log.trim().split("\n").slice(-3).join(" · ");
+    await loadPrices();
+    META = await api("/api/meta"); DIVINE = META.divine || DIVINE;
+  } catch (e) { $("#fetchMsg").textContent = e.message; }
+  $("#fetchPrices").disabled = false;
+});
 
 // ------------------------------------------------------------------ boot
 let META = { influences: [] };
