@@ -182,7 +182,11 @@ pub fn hints(gd: &GameData, item: &Item) -> Vec<Hint> {
             for &(mi, _) in pool.iter() {
                 let m = gd.m(mi);
                 if m.gen == gen && m.has_tag(tag) {
-                    fams.entry(gd.family_idx(mi)).or_insert(mi);
+                    // show the family's best (highest level) tier
+                    let e = fams.entry(gd.family_idx(mi)).or_insert(mi);
+                    if gd.m(*e).level < m.level {
+                        *e = mi;
+                    }
                 }
             }
             if fams.len() == 1 {

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/poecraft-core", "crates/poecraft-cli"]
+members = ["crates/poecraft-core", "crates/poecraft-cli", "crates/poecraft-server"]
 
 [workspace.package]
 edition = "2021"

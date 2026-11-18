@@ -28,6 +28,13 @@ python -m pytest -q
 python tools/parity_engine.py                 # Rust vs Python on every recipe
 ```
 
+**Web app (local only):** double-click `start.bat` (or `cargo run --release -p poecraft-server`),
+then open http://127.0.0.1:8790. Tabs: Item builder (base, item level, influences, legal mods only,
+mod pool with weights/chances and why a mod is blocked, elevated versions, bench crafts, crafting
+hints computed from the pool, paste/import, Copy item for PoB), Simulator (pick or edit a recipe,
+live progress bar), Compare (rank several recipes), Rules, Prices. The JSON API is documented at the
+top of `crates/poecraft-server/src/main.rs`.
+
 Item text (spec phase 2, started 2026-11-18): `poecraft sample RECIPE --pob` prints the crafted
 item as Path of Building text (paste via Items > Create custom), and `poecraft parse-item FILE|-`
 reads PoB or in-game clipboard text (incl. Ctrl+Alt+C advanced copy) back into a crafting item.
