@@ -1,0 +1,19 @@
+# Replica of a trade listing (2026-11-18): Royal Plate ilvl 87, Hunter/Warlord, 6-link:
+#   elevated Warlord mana-cost/ignore-stuns, T1 (not elevated) Hunter attack crit (+1.14%),
+#   additional Curse, low-tier armour/stun hybrid prefix, bench (56-74)% armour, T6 fire res.
+# Cheaper route: the Hunter piece only needs T1 attack crit as its ONLY influenced mod
+# (no Dominance on it): a magic Hunter plate with just that suffix.
+include "lib/endgame_chest_parts.craft"
+
+warlord_piece_lean()
+buy "Astral Plate" ilvl 84 influence hunter for price "base:astral_plate_hunter_84"
+transmute
+until has "Hunter: attack crit" tier <= 1 and influenced_count == 1 { alt }
+set_aside hunter
+merge_blind()
+curse_reforge()
+fill_prefixes()
+finish()
+
+goal has "Warlord: mana cost" elevated and has "Hunter: attack crit" tier <= 1 and has "Hunter: additional curse"
+sell 0 chaos
