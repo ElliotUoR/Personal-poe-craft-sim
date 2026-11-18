@@ -35,6 +35,11 @@ hints computed from the pool, paste/import, Copy item for PoB), Simulator (pick 
 live progress bar), Compare (rank several recipes), Rules, Prices. The JSON API is documented at the
 top of `crates/poecraft-server/src/main.rs`.
 
+Trade links: the item builder's "Open trade search" (or `POST /api/trade/link`) builds a
+pathofexile.com search for the item: one stat filter per mod line (lower end of the tier's range,
+negative values as a maximum), influence filters, exact base or any base of the class, instant
+buyout. Stat ids come from `data/trade_stats.json` (`python tools/fetch_trade_stats.py`).
+
 Item text (spec phase 2, started 2026-11-18): `poecraft sample RECIPE --pob` prints the crafted
 item as Path of Building text (paste via Items > Create custom), and `poecraft parse-item FILE|-`
 reads PoB or in-game clipboard text (incl. Ctrl+Alt+C advanced copy) back into a crafting item.

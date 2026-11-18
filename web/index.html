@@ -54,6 +54,16 @@
         </div>
         <pre id="pobText" class="small"></pre>
       </div>
+      <div class="card">
+        <h2>Check price on trade</h2>
+        <div class="row">
+          <label class="small"><input id="anyBase" type="checkbox"> any base of this type</label>
+          <button id="tradeBtn">Open trade search</button>
+        </div>
+        <div id="tradeMsg" class="small"></div>
+        <div class="row"><label>Your expected sell price (div) <input id="sellPrice" type="number" step="0.5" min="0" placeholder="e.g. 16"></label></div>
+        <p class="muted small">Use it in a recipe as <code>sell N divine</code> to get profit and margin.</p>
+      </div>
       <div class="card" id="hintsCard"><h2>Crafting hints</h2><ul id="hints"></ul></div>
     </div>
 

@@ -12,6 +12,7 @@
 //!   POST /api/jobs/run     {source, path?, runs?, mode?}            -> {job}
 //!   POST /api/jobs/compare {recipes: [{source, path?}], runs?, mode?} -> {job}
 //!   GET  /api/jobs/{id}                  progress (phase, done, total, label) and result
+//!   POST /api/trade/link  {item, any_base?, league?}   pathofexile.com trade search link
 //!   GET  /api/rules                      rules registry
 //!   GET  /api/prices                     price table and its metadata
 //!   POST /api/prices/fetch               run tools/fetch_prices.py (poe.ninja) and reload
@@ -44,6 +45,7 @@ struct App {
     prices: Arc<std::sync::RwLock<Arc<Prices>>>,
     root: PathBuf,
     jobs: Arc<Mutex<HashMap<u64, Job>>>,
+    trade: Arc<Option<poecraft_core::trade::TradeStats>>,
     next: Arc<AtomicU64>,
 }
 
@@ -383,6 +385,20 @@ async fn job_get(State(app): State<App>, AxPath(id): AxPath<u64>) -> ApiResult<V
     Ok(Json(v))
 }
 
+#[derive(Deserialize)]
+struct TradeReq {
+    item: ItemDto,
+    any_base: Option<bool>,
+    league: Option<String>,
+}
+async fn trade_link(State(app): State<App>, Json(r): Json<TradeReq>) -> ApiResult<Value> {
+    let ts = app.trade.as_ref().as_ref().ok_or_else(|| ApiError(StatusCode::NOT_FOUND, "data/trade_stats.json missing: run tools/fetch_trade_stats.py".into()))?;
+    let it = to_item(app.gd, &r.item)?;
+    let league = r.league.or_else(|| app.prices().meta.get("league").and_then(|v| v.as_str()).map(|s| s.to_string())).unwrap_or_else(|| "Standard".into());
+    let l = poecraft_core::trade::build_link(app.gd, ts, &it, &poecraft_core::trade::LinkOpts { league: &league, any_base: r.any_base.unwrap_or(false), status: "securable" });
+    Ok(Json(json!({ "url": l.url, "filters": l.filters, "skipped": l.skipped, "league": league, "stats_fetched": ts.fetched })))
+}
+
 async fn rules() -> Json<Value> {
     Json(json!(RULES))
 }
@@ -420,7 +436,7 @@ async fn main() -> Result<()> {
     let gd = default_data();
     let root = gd.data_dir.parent().map(|p| p.to_path_buf()).unwrap_or_default();
     let prices = Prices::load(&gd.data_dir, &[], true).map_err(|e| anyhow!(e))?;
-    let app = App { gd, prices: Arc::new(std::sync::RwLock::new(Arc::new(prices))), root: root.clone(), jobs: Arc::new(Mutex::new(HashMap::new())), next: Arc::new(AtomicU64::new(1)) };
+    let app = App { gd, prices: Arc::new(std::sync::RwLock::new(Arc::new(prices))), root: root.clone(), jobs: Arc::new(Mutex::new(HashMap::new())), trade: Arc::new(poecraft_core::trade::TradeStats::load(&gd.data_dir).ok()), next: Arc::new(AtomicU64::new(1)) };
     let api = Router::new()
         .route("/api/meta", get(meta))
         .route("/api/bases", get(bases))
@@ -431,6 +447,7 @@ async fn main() -> Result<()> {
         .route("/api/jobs/run", post(job_run))
         .route("/api/jobs/compare", post(job_compare))
         .route("/api/jobs/{id}", get(job_get))
+        .route("/api/trade/link", post(trade_link))
         .route("/api/rules", get(rules))
         .route("/api/prices", get(prices_handler))
         .route("/api/prices/fetch", post(prices_fetch))

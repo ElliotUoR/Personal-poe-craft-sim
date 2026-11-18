@@ -13,3 +13,4 @@ pub mod linalg;
 pub mod mechanics;
 pub mod prices;
 pub mod rules;
+pub mod trade;

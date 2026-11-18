@@ -112,6 +112,19 @@ $("#copyBtn").addEventListener("click", async () => {
   setTimeout(() => ($("#copyBtn").textContent = "Copy item"), 1500);
 });
 ["#roll", "#quality"].forEach((s) => $(s).addEventListener("input", renderText));
+$("#tradeBtn").addEventListener("click", async () => {
+  try {
+    const r = await api("/api/trade/link", { item: itemDto(), any_base: $("#anyBase").checked });
+    window.open(r.url, "_blank");
+    $("#tradeMsg").innerHTML = `<div class="ok">${r.filters.length} filters, ${esc(r.league)}, instant buyout.</div>` +
+      r.filters.map((f) => `<div class="muted">${esc(f.line)} → ${esc(f.stat)}${f.value !== null ? " (" + (f.value < 0 ? "max " : "min ") + f.value + ")" : ""}</div>`).join("") +
+      (r.skipped.length ? `<div style="color:var(--warn)">Not searchable on trade: ${r.skipped.map(esc).join("; ")}</div>` : "");
+  } catch (e) { $("#tradeMsg").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+});
+$("#sellPrice").addEventListener("change", () => {
+  const v = $("#sellPrice").value;
+  if (v) $("#tradeMsg").insertAdjacentHTML("beforeend", `<div class="ok">Add to a recipe: <code>sell ${esc(v)} divine</code></div>`);
+});
 ["#poolFilter", "#poolSide", "#showBlocked", "#benchFilter"].forEach((s) => $(s).addEventListener("input", renderPool));
 
 $("#base").addEventListener("input", async () => {
