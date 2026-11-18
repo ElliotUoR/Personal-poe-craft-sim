@@ -217,19 +217,18 @@ To add:
 7. **Mechanics backlog from §5**, interleaved as needed.
 
 ## 7. Open questions for the owner
-These are areas where I'm not fully confident. Each needs an in-game test; Craft of Exile works
-except where it's known to be wrong.
+Answers from the owner, 2026-11-18. The rule statuses are in `poecraft rules`.
 
-| # | Question | Why it matters |
-|---|---|---|
-| Q1 | **Partial suffix locks — answered by the owner 2026-11-18:** they can always be crafted; they protect exactly N suffixes; they take a prefix slot like the full lock; a reforge consumes them. **Still open:** when the item has more than N suffixes, which N are protected (random, or the player's choice)? | Gamble strategies, and the cost of every locked reforge on items with fewer than 3 suffixes |
-| Q2 | Can a locked reforge **add** new mods into open slots on the locked side? (Sanavixx's boots method implies yes; your rule says the protected side is untouched.) | Whether "fill the suffixes first" matters, and the Sanavixx boots route |
-| Q3 | How many new mods does a locked reforge roll? (Model: totals 4/5/6 with weights 8/3/1, at least one new mod.) | The 0–2 extra-prefix odds and how often prefixes end up full |
-| Q4 | Rare mod count when rerolling: 4/5/6 = 8/3/1? | Every reroll and Awakener fill |
-| Q5 | Foulborn Exalted Orb: what exactly does it do? | Filling open prefixes |
-| Q6 | Hinekora's Lock: after declining a preview, does a new lock give a different outcome? | Preview farming (third-suffix strategy) |
-| Q7 | Awakener: is the kept influenced mod picked uniformly when an item has several? Is the rest filled to 4–6 mods? | Merge outcomes |
-| Q8 | Dominance: target and victim uniform? Do upgrades below T1 ignore item level? | Elevation odds |
-| Q9 | Veiled Exalted Orb: which side gets the veiled affix? How many unveil options are offered? | The Veiled movement-speed finish |
-| Q10 | "Add a Mod to a <Conqueror> Item" beastcraft: does it require that influence already? Are its weights the same as the conqueror exalt? | The cheap way to get a second influenced mod |
-| Q11 | Metamod beastcraft: do you choose which metamod, or is it random? | Cost of locks on magic items |
+| # | Question | Answer | Status |
+|---|---|---|---|
+| Q1 | Partial locks | Can always be crafted; protect exactly N; take a slot on the other side; consumed by a reforge. With more than N mods on the side, the protected ones are **random** and the freed slots **can** fill. | owner-confirmed |
+| Q2 | Can a locked reforge add mods to the locked side? | **Yes.** Protected mods stay; open slots on that side can fill. Consequence: on the chest the Caster reforge only guarantees the curse when all 3 suffixes are full (2 suffixes: ~34%, the rest is the Hunter spell-crit suffix). See `curse_reforge_safe`. | owner-confirmed |
+| Q3 | Mod count of a locked reforge | Owner expects the same odds as a Chaos Orb (as modelled). | **open** |
+| Q4 | Rare mod count | Range 4-6 verified (PoEDB Orb_of_Alchemy wiki text: "four to six", "three to four on jewels"). The 8/3/1 odds remain the community figure. Our Astral Plate chaos prefix split 26.3/45.2/28.5% matches the owner's Craft of Exile run (26.1/44/28.5%), but CoE likely uses the same assumption. In-game counts would settle it. | **open (odds)** |
+| Q5 | Foulborn Exalted Orb | Adds a mod; for each mod type with N eligible tiers only the top K can roll (K = ceil(N/2) if N<=6, else floor(N/2)+1), weights x N/K (PoE Wiki text). | verified |
+| Q6 | Hinekora re-lock | New, different outcome. | owner-confirmed |
+| Q7 | Awakener | Kept mod: uniformly random. Fill count: owner thinks 3-6; wiki text for Chaos/Alchemy says 4-6; modelled 4-6. | **open (fill count)** |
+| Q8 | Dominance | Random target/victim; upgrades ignore item level. | owner-confirmed |
+| Q9 | Veiled Exalted | Random side; 3 unveil options. | owner-confirmed |
+| Q10 | "Add a Mod to a <Conqueror> Item" | Needs the influence; same odds as the conqueror exalt. Owner: "you can choose the tag for the mod" (to clarify). | owner-confirmed |
+| Q11 | Metamod beastcraft | Owner suspects removal. It is still in the 3.30 game data (PoEDB Bestiary_Recipe and Wild_Bristle_Matron, 2026-11-18); availability in Covens unknown. | **open** |

@@ -453,7 +453,7 @@ impl<'a> Engine<'a> {
             mods.push(Roll { m: mi, fractured: w.fractured, crafted: false });
         }
         let item = item.with_mods(mods);
-        let mx = item.max_affixes();
+        let mx = item.max_affixes(gd);
         if item.n_side(gd, Gen::Prefix) > mx || item.n_side(gd, Gen::Suffix) > mx {
             return Err(self.err(a, format!("a {} item can have at most {mx} prefix(es) and {mx} suffix(es)", item.rarity.name())));
         }

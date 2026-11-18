@@ -86,7 +86,8 @@ fn dominance_skips_metamod_protected_mods() {
 #[test]
 fn reforge_respects_full_lock_consumes_it_and_guarantees_curse() {
     let g = gd();
-    let mech = Mech::new(g, Switches::default());
+    // with the switch off nothing is added to the locked side (pre-2026-11-18 model)
+    let mech = Mech::new(g, Switches { reforge_fills_locked_side: false });
     let crit = elevated("Hunter: Attacks have", "Body Armour");
     let mana = elevated("Warlord: total mana cost", "Body Armour");
     let it = lock(&plate(&[crit, mana], &[Influence::Hunter, Influence::Warlord], Rarity::Rare), MetaKind::LockSuffixes(None));
@@ -150,7 +151,7 @@ fn beast_metamod_only_on_magic() {
 #[test]
 fn partial_lock_covering_all_suffixes_acts_as_full_lock() {
     let g = gd();
-    let mech = Mech::new(g, Switches::default());
+    let mech = Mech::new(g, Switches { reforge_fills_locked_side: false });
     let crit = elevated("Hunter: Attacks have", "Body Armour");
     let mana = elevated("Warlord: total mana cost", "Body Armour");
     let it = lock(&plate(&[crit, mana], &[Influence::Hunter, Influence::Warlord], Rarity::Rare), MetaKind::LockSuffixes(Some(2)));
@@ -177,5 +178,54 @@ fn one_suffix_lock_with_two_suffixes_protects_one_at_random() {
     assert!((total - 1.0).abs() < 1e-12);
     for o in out.keys() {
         assert!(o.has_mod(crit) || o.has_mod(mana), "at least one suffix survives");
+    }
+}
+
+// ---------------------------------------------------------------- owner answers 2026-11-18
+#[test]
+fn locked_reforge_can_add_to_locked_side_by_default() {
+    let g = gd();
+    let mech = Mech::new(g, Switches::default());
+    let crit = elevated("Hunter: Attacks have", "Body Armour");
+    let mana = elevated("Warlord: total mana cost", "Body Armour");
+    let it = lock(&plate(&[crit, mana], &[Influence::Hunter, Influence::Warlord], Rarity::Rare), MetaKind::LockSuffixes(None));
+    let mut ch = RandomChooser::new(4);
+    let mut added = 0;
+    for _ in 0..500 {
+        let r = mech.harvest_reforge(&it, &mut ch, "caster").unwrap();
+        assert!(r.has_mod(crit) && r.has_mod(mana), "protected suffixes stay");
+        added += (r.n_side(g, Gen::Suffix) == 3) as usize;
+    }
+    assert!(added > 0, "a third suffix is sometimes added to the locked side");
+}
+
+#[test]
+fn foulborn_keeps_top_tiers_with_wiki_weights() {
+    use poecraft_core::mechanics::keep_tiers;
+    let table = [(1, 1), (2, 1), (3, 2), (4, 2), (5, 3), (6, 3), (7, 4), (8, 5), (9, 5), (10, 6), (11, 6), (12, 7), (13, 7)];
+    for (n, k) in table {
+        assert_eq!(keep_tiers(n), k, "N={n}");
+    }
+    // the wiki example: 4 eligible tiers 800/400/200/100 (lowest -> highest) keep 200/100 as 400/200
+    let g = gd();
+    let fam = g.resolve_mod("flat life", Some("Body Armour")).unwrap();
+    let b = g.resolve_base("Astral Plate").unwrap();
+    let tiers: Vec<ModIdx> = g.tiers_for(fam, b).iter().rev().take(4).copied().collect(); // 4 lowest, lowest first
+    let (m, w) = poecraft_core::mechanics::foulborn_cull(g, &tiers, &[800, 400, 200, 100]);
+    assert_eq!(m, vec![tiers[3], tiers[2]]);
+    assert_eq!(w.iter().map(|x| x / 840).collect::<Vec<_>>(), vec![200, 400]);
+}
+
+#[test]
+fn jewels_have_two_prefixes_and_suffixes() {
+    let g = gd();
+    let mech = Mech::new(g, Switches::default());
+    let b = g.resolve_base("Cobalt Jewel").unwrap();
+    let it = Item::new(b, 84, Rarity::Normal, Influences::default());
+    let mut ch = RandomChooser::new(9);
+    for _ in 0..300 {
+        let r = mech.alchemy(&it, &mut ch).unwrap();
+        assert!((3..=4).contains(&r.mods.len()));
+        assert!(r.n_side(g, Gen::Prefix) <= 2 && r.n_side(g, Gen::Suffix) <= 2);
     }
 }

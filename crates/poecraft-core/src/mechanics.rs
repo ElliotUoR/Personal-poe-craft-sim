@@ -70,6 +70,9 @@ impl Chooser for RandomChooser {
 // ------------------------------------------------------------------ constants
 /// rule rare_mod_count (UNVERIFIED): 4/5/6 mods with weights 8/3/1.
 pub const RARE_MOD_COUNT: [(usize, u32); 3] = [(4, 8), (5, 3), (6, 1)];
+/// Rare jewels: 3 or 4 mods (PoEDB Orb_of_Alchemy community text). Odds UNVERIFIED (rule
+/// jewel_mod_count): assumed equal.
+pub const RARE_JEWEL_MOD_COUNT: [(usize, u32); 2] = [(3, 1), (4, 1)];
 /// rule magic_mod_count (UNVERIFIED): 1 or 2 affixes, equal chance.
 pub const MAGIC_MOD_COUNT: [(usize, u32); 2] = [(1, 1), (2, 1)];
 
@@ -132,6 +135,38 @@ pub fn beast_cost(name: &str) -> Cost {
         c.push(("any_rare_beast".into(), *any as f64));
     }
     c
+}
+
+/// Foulborn tier culling: per modifier type (family), keep the K highest of the N eligible
+/// tiers and scale their weights by N/K. A common factor of 840 keeps weights integral
+/// (840 is divisible by every K up to 8, i.e. N up to 15).
+pub fn foulborn_cull(gd: &GameData, mods: &[ModIdx], weights: &[u32]) -> (Vec<ModIdx>, Vec<u32>) {
+    let mut by_fam: FxHashMap<FamIdx, Vec<usize>> = FxHashMap::default();
+    for (i, &m) in mods.iter().enumerate() {
+        by_fam.entry(gd.family_idx(m)).or_default().push(i);
+    }
+    let mut groups: Vec<Vec<usize>> = by_fam.into_values().collect();
+    groups.sort_by_key(|v| v.iter().copied().min().unwrap_or(0));
+    let (mut om, mut ow) = (Vec::new(), Vec::new());
+    for mut v in groups {
+        v.sort_by(|a, b| gd.m(mods[*b]).level.cmp(&gd.m(mods[*a]).level).then(a.cmp(b)));
+        let n = v.len();
+        let k = keep_tiers(n);
+        for &i in v.iter().take(k) {
+            om.push(mods[i]);
+            ow.push((weights[i] as u64 * 840 * n as u64 / k as u64) as u32);
+        }
+    }
+    (om, ow)
+}
+
+/// Tiers kept out of N eligible (PoE Wiki, Foulborn Exalted Orb).
+pub fn keep_tiers(n: usize) -> usize {
+    if n <= 6 {
+        n.div_ceil(2)
+    } else {
+        n / 2 + 1
+    }
 }
 
 // ------------------------------------------------------------------ pools
@@ -281,6 +316,15 @@ impl<'a> Mech<'a> {
         item
     }
 
+    /// Number of mods on a freshly rolled rare of this item's class.
+    fn rare_count(&self, item: &Item, ch: &mut dyn Chooser) -> usize {
+        if crate::item::is_jewel(self.gd.item_class(item.base)) {
+            self.count(ch, &RARE_JEWEL_MOD_COUNT, "jewel_mod_count")
+        } else {
+            self.count(ch, &RARE_MOD_COUNT, "rare_mod_count")
+        }
+    }
+
     fn count(&self, ch: &mut dyn Chooser, table: &[(usize, u32)], rule: &'static str) -> usize {
         self.rule(rule);
         let w: Vec<u32> = table.iter().map(|x| x.1).collect();
@@ -369,7 +413,7 @@ impl<'a> Mech<'a> {
     pub fn alchemy(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
         require(item.rarity == Rarity::Normal, || "Orb of Alchemy needs a normal item.".into())?;
         let it = Item { rarity: Rarity::Rare, preview_lock: false, ..item.clone() };
-        let n = item.mods.len() + self.count(ch, &RARE_MOD_COUNT, "rare_mod_count");
+        let n = item.mods.len() + self.rare_count(item, ch);
         Ok(self.fill_random(it, ch, n, PoolOpts::both()))
     }
 
@@ -379,7 +423,7 @@ impl<'a> Mech<'a> {
         self.rule("chaos_keeps_locked");
         let prot = self.protected(item, ch);
         let keep = self.kept(item, &prot, false);
-        let n = (keep.len() + 1).max(self.count(ch, &RARE_MOD_COUNT, "rare_mod_count"));
+        let n = (keep.len() + 1).max(self.rare_count(item, ch));
         Ok(self.fill_random(item.with_mods(keep), ch, n, PoolOpts::both()))
     }
 
@@ -488,7 +532,7 @@ impl<'a> Mech<'a> {
         }
         let res = Item { rarity: Rarity::Rare, influences: target.influences.union(donor.influences), preview_lock: false, ..target.clone() };
         let res = res.with_mods(kept.iter().map(|r| Roll::new(r.m)).collect());
-        let n = kept.len().max(self.count(ch, &RARE_MOD_COUNT, "rare_mod_count"));
+        let n = kept.len().max(self.rare_count(target, ch));
         Ok(self.fill_random(res, ch, n, PoolOpts::both()))
     }
 
@@ -525,7 +569,7 @@ impl<'a> Mech<'a> {
         let mut mods = keep;
         mods.push(Roll::new(first));
         let it = base.with_mods(mods);
-        let n = it.mods.len().max(self.count(ch, &RARE_MOD_COUNT, "rare_mod_count"));
+        let n = it.mods.len().max(self.rare_count(item, ch));
         Ok(self.fill_random(it, ch, n, sides))
     }
 
@@ -542,7 +586,7 @@ impl<'a> Mech<'a> {
         let mut keep: Vec<Roll> = item.mods.iter().filter(|r| r.fractured).copied().collect();
         keep.push(Roll::new(mid));
         let it = Item { rarity: Rarity::Rare, ..item.clone() }.with_mods(keep);
-        let n = it.mods.len().max(self.count(ch, &RARE_MOD_COUNT, "rare_mod_count"));
+        let n = it.mods.len().max(self.rare_count(item, ch));
         Ok(self.fill_random(it, ch, n, PoolOpts::both()))
     }
 
@@ -685,11 +729,20 @@ impl<'a> Mech<'a> {
         Ok(rest.with_added(Roll::new(choice)))
     }
 
-    /// Foulborn Exalted Orb (rule foulborn_exalt, UNVERIFIED model).
+    /// Foulborn Exalted Orb (rule foulborn_exalt). PoEDB: "Augments a rare item with a new
+    /// random modifier with higher level modifiers being more likely". Mechanism (PoE Wiki
+    /// text supplied by the owner, 2026-11-18): for each modifier type with N eligible tiers,
+    /// only the K highest tiers can roll, K = ceil(N/2) if N <= 6 else floor(N/2) + 1, and their
+    /// weights are multiplied by N/K. `side` restricts it to one side (stand-in for a
+    /// "cannot be changed" craft on the other side).
     pub fn foulborn_exalt(&self, item: &Item, ch: &mut dyn Chooser, side: Option<Gen>) -> CResult<Item> {
         require(item.rarity == Rarity::Rare, || "Foulborn Exalted Orb needs a rare item.".into())?;
         self.rule("foulborn_exalt");
         let opts = side.map(PoolOpts::side).unwrap_or_else(PoolOpts::both);
-        self.add_random_mod(item, ch, opts).ok_or_else(|| CraftError(format!("Foulborn Exalted Orb: no open {}.", side.map(|g| g.name()).unwrap_or("affix"))))
+        let pool = self.pool(item, opts);
+        require(!pool.mods.is_empty(), || format!("Foulborn Exalted Orb: no open {}.", side.map(|g| g.name()).unwrap_or("affix")))?;
+        let (mods, weights) = foulborn_cull(self.gd, &pool.mods, &pool.weights);
+        let i = ch.weighted(&weights);
+        Ok(item.with_added(Roll::new(mods[i])))
     }
 }

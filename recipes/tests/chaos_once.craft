@@ -1,0 +1,11 @@
+# One Chaos Orb on a rare base; used to compare the prefix-count distribution with Craft of
+# Exile (owner's experiment, 2026-11-18). Change the base/ilvl to match the CoE setup.
+buy "Astral Plate" ilvl 86 rare
+chaos
+track "0 prefixes" prefix_count == 0
+track "1 prefix" prefix_count == 1
+track "2 prefixes" prefix_count == 2
+track "3 prefixes" prefix_count == 3
+track "4 mods" mod_count == 4
+track "5 mods" mod_count == 5
+track "6 mods" mod_count == 6

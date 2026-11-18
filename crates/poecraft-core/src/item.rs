@@ -19,6 +19,10 @@ impl Roll {
     }
 }
 
+pub fn is_jewel(cls: &str) -> bool {
+    matches!(cls, "Jewel" | "AbyssJewel")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Rarity {
     Normal,
@@ -113,12 +117,19 @@ impl Item {
         self.side(gd, gen).count()
     }
 
-    pub fn max_affixes(&self) -> usize {
-        self.rarity.max_affixes()
+    /// Prefixes (= suffixes) allowed. Rare jewels and abyss jewels have 2 + 2
+    /// (PoEDB Orb_of_Alchemy community text: "three to four if used on jewels").
+    pub fn max_affixes(&self, gd: &GameData) -> usize {
+        let m = self.rarity.max_affixes();
+        if m == 3 && is_jewel(gd.item_class(self.base)) {
+            2
+        } else {
+            m
+        }
     }
 
     pub fn open_slots(&self, gd: &GameData, gen: Gen) -> usize {
-        self.max_affixes().saturating_sub(self.n_side(gd, gen))
+        self.max_affixes(gd).saturating_sub(self.n_side(gd, gen))
     }
 
     pub fn meta(&self, gd: &GameData, kind: MetaKind) -> bool {
