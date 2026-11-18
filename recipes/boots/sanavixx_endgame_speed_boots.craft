@@ -1,0 +1,93 @@
+# Sanavixx "Endgame Boots (Speed Variation)" (https://sanavixx.com/crafting/, read 2026-11-18,
+# AFTER the blind test was committed). Translated step by step. Notes on approximations:
+#  * Step 3 (locked suffixes + reforge Physical to gain a Hunter mod) only works if a locked
+#    reforge may ADD mods to open slots of the locked side: every physical-tagged mod on Hunter
+#    boots is a Hunter SUFFIX. So this recipe turns that rule on (see known-discrepancies #5).
+#  * "Foulborn Exalted Orb" mechanics are unknown here: modelled as "adds a random suffix"
+#    (UNVERIFIED), and the bench "Prefixes Cannot Be Changed" they craft first is only paid for.
+#  * Alt/aug spam is modelled with alts only (slightly pessimistic).
+#  * Veiled Exalted + unveil: UNVERIFIED model in poecraft/mechanics.py.
+rule reforge_fills_locked_side on
+include "../lib/merge.craft"
+
+# Step 6 filler: suffixes must be full so the Veiled Exalted Orb's new mod is a prefix.
+def fill_suffixes() {
+    until open_suffix == 0 {
+        pay 4 divine                # bench "Prefixes Cannot Be Changed" (4 div + 4 blessed in 3.30)
+        pay 4 blessed
+        foulborn_exalt
+    }
+}
+
+
+# ---- Steps 1-3: Hunter boots, magic Tailwind only -> lock + imprint -> regal, reforge Physical, Dominance
+buy "Two-Toned Boots" ilvl 84 influence hunter for price "base:boots_hunter_75"
+transmute
+repeat {
+    until has "Hunter: tailwind" { alt }
+    if prefix_count > 0 { annul }
+} until has "Hunter: tailwind" and prefix_count == 0
+craft lock_suffixes                 # bench: 4 divine + 4 blessed in 3.30
+beastcraft imprint
+repeat {
+    if not has "Hunter: tailwind" {
+        beastcraft restore_imprint
+        beastcraft imprint
+    }
+    regal
+    harvest reforge physical
+    until has "Hunter: tailwind" elevated or not has "Hunter: tailwind" or influenced_count < 2 { dominance }
+} until has "Hunter: tailwind" elevated
+set_aside hunter
+
+# ---- Step 4: Redeemer boots: reforge Critical (guaranteed Elusive) until T1 Onslaught, Dominance
+buy "Two-Toned Boots" ilvl 84 influence redeemer for price "base:boots_redeemer_80"
+alch
+repeat {
+    until has "Redeemer: onslaught" tier <= 1 and influenced_count >= 2 { harvest reforge critical }
+    until has "Redeemer: onslaught" elevated or not has "Redeemer: onslaught" or influenced_count < 2 { dominance }
+} until has "Redeemer: onslaught" elevated
+set_aside redeemer
+
+# ---- Step 5: Awaken the Redeemer boots onto the Hunter boots; yolo annul if prefixes are full
+take hunter
+awaken redeemer
+until open_prefix >= 1 or not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated { annul }
+if not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated { fail "lost an elevated mod (step 5)" }
+
+# ---- Steps 6-7: fill suffixes, lock suffixes, reforge Critical for Elusive, keep an open prefix
+repeat limit 30 {
+    fill_suffixes()
+    beastcraft lock_suffixes
+    harvest reforge critical
+    until open_prefix >= 1 or not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated { annul }
+} until (has "Redeemer: elusive" and open_prefix >= 1) or not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated
+if not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated { fail "lost an elevated mod (step 7)" }
+fill_suffixes()
+beastcraft lock_suffixes
+
+# ---- Step 8: Veiled Exalted Orb; if it removed the metamod, unveil movement speed
+repeat limit 30 {
+    veiled_exalt
+    if not has "Redeemer: elusive" {
+        harvest reforge critical      # metamod still present -> suffixes protected
+        until open_prefix >= 1 or not has "Hunter: tailwind" elevated { annul }
+        if open_prefix >= 1 {
+            fill_suffixes()
+            beastcraft lock_suffixes
+        }
+    }
+} until (has "Redeemer: elusive" and has "VeiledPrefix") or not has "Hunter: tailwind" elevated
+     or not has "Redeemer: onslaught" elevated
+if has "VeiledPrefix" {
+    unveil "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently",
+           "JunMasterVeiledMovementVelocityAndOnslaughtOnKill",
+           "JunMasterVeiledMovementVelocityAndCannotBeChilled__"
+}
+
+goal has "Hunter: tailwind" elevated and has "Redeemer: onslaught" elevated and has "Redeemer: elusive"
+     and (has "movement speed" or has "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently"
+          or has "JunMasterVeiledMovementVelocityAndOnslaughtOnKill"
+          or has "JunMasterVeiledMovementVelocityAndCannotBeChilled__")
+track "unveiled Chosen movement speed (25-30%)" has "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently"
+     or has "JunMasterVeiledMovementVelocityAndOnslaughtOnKill" or has "JunMasterVeiledMovementVelocityAndCannotBeChilled__"

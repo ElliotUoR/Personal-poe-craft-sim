@@ -67,5 +67,65 @@ Same trick found for the chest: the Awakener rerolls every non-kept mod, so the 
 "no other suffixes + lock + scour → magic" step only pays off with Hinekora's preview.
 Dropping it (`recipes/endgame_chest_lean.craft`) cuts the chest from 12.7 to **11.0 div**.
 
-## Sanavixx comparison
-(to be added after reading the "Endgame Speed Boots" section; see below)
+## Sanavixx comparison (written after reading their "Endgame Boots (Speed Variation)" section)
+Their method, as a recipe: `recipes/boots/sanavixx_endgame_speed_boots.craft`.
+1. Hunter boots: alt/aug until a magic item with only Tailwind (annul a prefix if one rolls).
+2. **Bench** "Suffixes Cannot Be Changed", then a beastcraft **Imprint**.
+3. Regal, Harvest reforge **Physical** to gain a 2nd Hunter mod, then Dominance. If Tailwind is
+   lost: restore the imprint, re-imprint, repeat.
+4. Redeemer boots: **spam Harvest reforge Critical** (guaranteed Elusive = the 2nd influenced
+   mod) until T1 Onslaught, then Dominance.
+5. Awaken the Redeemer boots onto the Hunter boots, yolo annul if prefixes are full.
+6. Fill the suffixes (bench "Prefixes Cannot Be Changed" + Foulborn Exalted Orb), beastcraft
+   suffix lock.
+7. Reforge Critical for Elusive, yolo annul if prefixes are full, beastcraft suffix lock.
+8. **Veiled Exalted Orb**: with suffixes locked it removes the metamod or Elusive. If the metamod
+   goes, **unveil a "Chosen" movement speed** (25–30% MS + a bonus line); if Elusive goes, redo 7.
+
+Same prices, 3000 runs each:
+
+| route | success | expected cost | cost per success | p90 | movement speed you get |
+| --- | --- | --- | --- | --- | --- |
+| **A (mine, blind)** | 95.2% | **9.3 div** | **9.8 div** | 14.2 div | bench 20–24% (natural roll in 8%) |
+| D hybrid (A + their Veiled finish) | 91.5% | 13.1 div | 14.4 div | 18.1 div | Chosen 25–30% in 45.5%, otherwise bench |
+| **Sanavixx** | 77.4% | 24.0 div | 31.0 div | 35.5 div | Chosen 25–30% in 75% of runs |
+| B (mine) | 45.9% | 14.0 div | 30.5 div | 22.7 div | natural |
+| C (mine) | 68.6% | 22.1 div | 32.2 div | 40.9 div | natural |
+
+**Honest verdict.**
+* For the item as specified (the four mods), **Route A is about 2.5× cheaper** per success and
+  much safer. Sanavixx's route is more expensive mainly at current 3.30 prices:
+  - the bench "Suffixes Cannot Be Changed" in step 2 is 4 div + 4 blessed in 3.30 (~4.7 div);
+    a Wild Bristle Matron beastcraft (~1 div) does the same job;
+  - the Imprint safety net costs a Craicic Croaker (~1 div) per Dominance attempt, which is more
+    than redoing the alt spam (~0.5 div);
+  - Veiled Exalted Orbs (~3 div each, ~1.5 used) and Foulborn exalts;
+  - the "yolo annuls" without a lock cost 23% of runs an elevated mod.
+* **Their item is better**: in 75% of runs it has a Chosen 25–30% MS with a bonus line, where
+  mine has a 20–24% bench MS. If that matters, the hybrid **Route D** gets the Chosen MS 45% of
+  the time for 13 div. It is cheaper than theirs because it keeps the cheap pieces (alt + "Add a
+  Mod to a X Item" beastcraft) and the beastcraft lock. It doesn't fill suffixes first (their
+  Foulborn step), so the veiled mod is sometimes a suffix.
+* **Tricks they had that I missed**: (1) Veiled Exalt with locked suffixes as a *targeted prefix
+  removal + premium MS unveil*. (2) Filling the suffixes first so the veiled mod must be a prefix.
+  (3) Using the guaranteed-Elusive Critical reforge to *create the second influenced mod* on the
+  Redeemer piece (I only used it at the end). It costs ~1.5 div of lifeforce at 2.3% T1
+  Onslaught per reforge, roughly the same as my alt spam, and it needs no extra beastcraft.
+* **Tricks I had that they missed (at current prices)**: beastcraft metamod instead of the 3.30
+  bench lock; the 2–3c "Add a Mod to a <Conqueror> Item" beastcraft instead of a reforge for
+  the second influenced mod; a 4c bench MS when a cheaper item is acceptable.
+* **Mechanics question raised.** Their step 3 (suffixes locked, reforge Physical "to get the
+  second Hunter mod") only works if a locked reforge can **add new mods into open slots on the
+  locked side**: every physical-tagged mod on Hunter boots is a Hunter *suffix*. Step 6 (fill
+  suffixes before the locked reforge) points the same way. Your ground-truth rule says the
+  protected side is "left untouched". I kept that as the default and added a switch
+  (`rule reforge_fills_locked_side on`), which their recipe turns on. **Please test in game**:
+  on a rare with 1 suffix + suffix lock, does a reforge ever add a suffix?
+  (docs/known-discrepancies.md #5)
+
+### Mechanics added for this comparison
+* Veiled Exalted Orb and unveil (RePoE `unveiled` mods; 3 offers by weight). UNVERIFIED:
+  removal respects metamods; the side is uniform among open sides; offer count and weights.
+* Foulborn Exalted Orb: modelled as "add a random suffix" (UNVERIFIED; not on the PoEDB pages
+  fetched; price 640c from outof.games).
+* Harvest reforge Physical, beastcraft Imprint/restore (already present), `rule` switches.

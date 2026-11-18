@@ -61,6 +61,7 @@ class Mod:
     influence: str | None  # influence this mod belongs to (from its spawn tags)
     elevated: bool
     crafted: bool = False
+    domain: str = "item"
 
     @property
     def family_key(self):
@@ -116,7 +117,7 @@ class GameData:
                 groups=tuple(m["groups"]), type=m["type"], tags=tuple(m["tags"]), level=m["level"],
                 spawn=tuple(tuple(x) for x in m["spawn"]), genw=tuple(tuple(x) for x in m["genw"]),
                 text=m["text"], essence_only=m["essence_only"], influence=influence,
-                elevated="Elevated" in m["name"], crafted=mid in bench_mods,
+                elevated="Elevated" in m["name"], crafted=mid in bench_mods, domain=m.get("domain", "item"),
             )
         self._build_families()
         self.aliases = self._load_aliases()
@@ -128,7 +129,7 @@ class GameData:
         self._tier_cache = {}
         fams: dict[tuple, Family] = {}
         for m in self.mods.values():
-            if m.crafted:
+            if m.crafted or m.domain == "veiled":
                 continue
             if m.type.startswith("OLD"):
                 # legacy versions of elevated mods (e.g. OLDAdditionalCurseOnEnemiesMaven)
@@ -136,7 +137,7 @@ class GameData:
             fam = fams.setdefault(m.family_key, Family(m.family_key))
             if m.elevated:
                 fam.elevated = m.id
-            elif any(w > 0 for _t, w in m.spawn) or m.essence_only:
+            elif any(w > 0 for _t, w in m.spawn) or m.essence_only or m.domain == "unveiled":
                 fam.tiers.append(m.id)
         # Some elevated mods have a "type" that does not match their base tiers
         # (e.g. ReducedPhysicalReflectTaken vs PhysicalDamageCannotBeReflected...).
@@ -169,7 +170,8 @@ class GameData:
         t = self._tier_cache.get(mod_id)
         if t is None:
             m = self.mods[mod_id]
-            t = 1 if m.crafted else self.family(mod_id).tier_of(mod_id)
+            fk = self.family_key(mod_id)
+            t = 1 if (m.crafted or fk not in self.families) else self.families[fk].tier_of(mod_id)
             self._tier_cache[mod_id] = t
         return t
 
@@ -290,6 +292,27 @@ class GameData:
         ex = fam.tiers[0] if fam.tiers else fam.elevated
         return f'{(inf or "normal").title()} {gen} "{self.mods[ex].short()}"'
 
+    @lru_cache(maxsize=1024)
+    def unveil_pool(self, base_id: str, influences: frozenset, ilvl: int, gen: str):
+        """Unveiled mods (domain 'unveiled' in RePoE) that can appear when unveiling a
+        veiled affix of side ``gen`` on this base."""
+        tags = set(self.bases[base_id]["tags"])
+        for inf in influences:
+            tags.add(self.influence_tag(base_id, inf))
+        out = []
+        for mid, m in self.mods.items():
+            if m.domain != "unveiled" or m.gen != gen or m.level > ilvl:
+                continue
+            w = 0
+            for tag, tw in m.spawn:
+                if tag in tags:
+                    w = tw
+                    break
+            if w > 0:
+                out.append((mid, w))
+        out.sort()
+        return tuple(out)
+
     # ------------------------------------------------------------------ pools
     @lru_cache(maxsize=4096)
     def spawn_pool(self, base_id: str, influences: frozenset, ilvl: int):
@@ -303,7 +326,7 @@ class GameData:
             tags.add(self.influence_tag(base_id, inf))
         out = []
         for mid, m in self.mods.items():
-            if m.crafted or m.essence_only or m.elevated or m.level > ilvl:
+            if m.crafted or m.essence_only or m.elevated or m.level > ilvl or m.domain != "item":
                 continue
             w = 0
             for tag, tw in m.spawn:

@@ -26,6 +26,7 @@ ACTION_COST = {
     "transmute": "transmute", "alteration": "alt", "augment": "aug", "regal": "regal", "alchemy": "alch",
     "chaos": "chaos", "exalt": "exalt", "annul": "annul", "scour": "scour", "dominance": "dominance",
     "fracture": "fracture", "veiled_exalt": "veiled_exalt", "awaken": "awakener",
+    "foulborn_exalt": "foulborn_exalt",
 }
 LOST = "_lost_chaos"  # pseudo-currency: chaos value of discarded bought bases
 
@@ -182,11 +183,15 @@ class Engine:
             return replace(st, item=it, aside=st.without_aside(args["name"]), value=v), cost
         item = self._need_item(a, st)
         if op in ("transmute", "alteration", "augment", "regal", "alchemy", "chaos", "exalt", "annul",
-                  "dominance", "fracture", "veiled_exalt"):
+                  "dominance", "fracture", "veiled_exalt", "foulborn_exalt"):
             fn = {"transmute": M.transmute, "alteration": M.alteration, "augment": M.augment, "regal": M.regal,
                   "alchemy": M.alchemy, "chaos": M.chaos, "exalt": M.exalt, "annul": M.annul,
-                  "dominance": M.dominance, "fracture": M.fracture, "veiled_exalt": M.veiled_exalt}[op]
+                  "dominance": M.dominance, "fracture": M.fracture, "veiled_exalt": M.veiled_exalt,
+                  "foulborn_exalt": M.foulborn_exalt}[op]
             return replace(st, item=fn(item, ch)), {ACTION_COST[op]: 1}
+        if op == "unveil":
+            prefs = [self._resolve(r, item, a.line, a.file) for r in args["prefer"]]
+            return replace(st, item=M.unveil(item, ch, prefs)), {}
         if op == "scour":
             return replace(st, item=M.scour(item)), {"scour": 1}
         if op == "remove_crafted":
@@ -341,7 +346,19 @@ class Engine:
                            f"add_prefix_remove_suffix, add_suffix_remove_prefix")
 
     # ------------------------------------------------------------ Monte Carlo
+    def _apply_rules(self, prog):
+        M.RULES.clear()
+        M.RULES.update(M.DEFAULT_RULES)
+        for k, v in prog.rules.items():
+            if k not in M.DEFAULT_RULES:
+                raise RecipeError(f"unknown rule '{k}' (known: {', '.join(M.DEFAULT_RULES)})")
+            M.RULES[k] = v
+        if getattr(self, "_rules_seen", None) != dict(M.RULES):
+            self._rules_seen = dict(M.RULES)
+            self.__dict__.pop("_iid_cache", None)
+
     def run_mc(self, prog: Program, seed=None, max_steps=200_000, trace=None):
+        self._apply_rules(prog)
         ch = M.RandomChooser(seed)
         costs = defaultdict(float)
         steps = [0]
@@ -422,7 +439,7 @@ class Engine:
     # is a sequence of independent identical trials: the outcome distribution does not
     # depend on what was rerolled away. Such loops are solved in closed form
     # (geometric number of trials), both in Monte Carlo and in the exact engine.
-    IID_OPS = {"alteration", "chaos"}
+    IID_OPS = {"alteration", "chaos", "harvest_reforge"}
 
     def _iid_loop(self, node, st):
         body = node.body.body
@@ -434,17 +451,23 @@ class Engine:
             return None
         if act.op == "alteration" and item.rarity != "magic":
             return None
-        if act.op == "chaos" and item.rarity != "rare":
+        if act.op in ("chaos", "harvest_reforge") and item.rarity != "rare":
             return None
-        kept = tuple(r for r in item.mods if not M._removable(item, r)) if act.op == "chaos" else \
+        if act.op == "harvest_reforge" and (item.prefixes_locked() or item.suffixes_locked()):
+            return None  # the reforge consumes the lock: later iterations differ from the first
+        kept = tuple(r for r in item.mods if not M._removable(item, r)) if act.op != "alteration" else \
             tuple(r for r in item.mods if r.fractured)
         key = (id(act), id(node), item.base, item.ilvl, item.influences, item.rarity, kept, item.links,
                item.white_sockets, item.tag)
         cache = self.__dict__.setdefault("_iid_cache", {})
         if key in cache:
             return cache[key]
-        budget = [500_000, 0]
-        outs = _enumerate(lambda ch: self.primitive(act, st, ch), budget)
+        budget = [200_000, 0]
+        try:
+            outs = _enumerate(lambda ch: self.primitive(act, st, ch), budget)
+        except ExactTooLarge:
+            cache[key] = None  # too many outcomes: simulate the loop step by step instead
+            return None
         succ, fail = [], []
         cost = None
         for (s2, cost_items), p in outs.items():
@@ -480,6 +503,7 @@ class Engine:
     # ------------------------------------------------------------ exact
     def run_exact(self, prog: Program, max_paths=400_000, max_states=4000, max_seconds=90):
         import time
+        self._apply_rules(prog)
         self._budget = [max_paths, max_states, time.time() + max_seconds]
         self._shared_ids = set()
         self._cache = {}

@@ -91,6 +91,15 @@ P(life) from 2.5% to 13%. On these numbers you should not retry. Buying a finish
   assumes a declined preview can be re-locked for a fresh preview (UNVERIFIED). It is not
   worth it at current beast prices.
 
+## Blind test: Hunter/Redeemer speed boots
+Full write-up: [docs/blind-test-boots.md](docs/blind-test-boots.md). Recipes are in `recipes/boots/`.
+
+| route | success | expected cost | cost per success | p90 | movement speed |
+| --- | --- | --- | --- | --- | --- |
+| **A: mine** (Critical reforge → guaranteed Elusive, bench MS) | 95.2% | **9.3 div** | **9.8 div** | 14.2 div | bench 20–24% |
+| D: hybrid (A + Sanavixx's Veiled finish) | 91.5% | 13.1 div | 14.4 div | 18.1 div | Chosen 25–30% in 45% |
+| Sanavixx method | 77.4% | 24.0 div | 31.0 div | 35.5 div | Chosen 25–30% in 75% |
+
 ## Implemented mechanics
 All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its source.
 * Mod rolling: chance = weight / total weight of mods that can roll now. Respects ilvl, base and
@@ -106,9 +115,10 @@ All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its
 * Beastcrafts: metamod, imprint/restore, Hinekora's Lock + `foresee`, max links,
   "Add a Mod to a Hunter/Warlord/Redeemer Item", add prefix/remove suffix and the reverse.
   Each one costs its specific beasts.
+* Veiled Exalted Orb + unveil (RePoE unveiled mods); Foulborn Exalted Orb (approximation).
 * Omen of Blanching: stub (cost only).
-* Not implemented: recombinators (out of scope), Veiled Exalted Orb (raises an error), fossils,
-  Eldritch implicits, socket colours, mod values.
+* Not implemented: recombinators (out of scope), fossils, Eldritch implicits, socket colours,
+  mod values, Harvest "more/less likely" reforges.
 
 ## UNVERIFIED rules (assumptions; please confirm in game)
 1. Rare mod count when rerolling (chaos/alch/reforge/Awakener fill/essence): 4/5/6 mods with
@@ -131,6 +141,10 @@ All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its
     preview.
 11. Max-links beastcraft gives a 6-link on body armours (sockets are not simulated).
 12. Fracturing Orb never picks crafted mods.
+13. Veiled Exalted Orb: removal respects metamods; the veiled affix goes to a uniformly chosen open
+    side. Unveil shows 3 offers drawn by weight. Foulborn Exalted Orb = "add a random suffix".
+14. Locked Harvest reforge does **not** add mods to the locked side (your rule). Sanavixx's boots
+    method implies it does; switchable with `rule reforge_fills_locked_side on`.
 
 ### The four open questions from the brief
 1. *Does Dominance skip metamod-protected mods?* **Yes.** PoEDB's Orb of Dominance page

@@ -1,0 +1,34 @@
+# Route D (hybrid, written AFTER reading Sanavixx): Route A's cheap pieces and guaranteed-Elusive
+# Critical reforge, then Sanavixx's finish: lock suffixes + Veiled Exalted Orb (with suffixes
+# locked it can only remove a prefix: the metamod or Elusive) + unveil a "Chosen" 25-30%
+# movement speed. If Elusive is hit, re-reforge Critical and try again. Fallback: bench MS.
+include "../lib/boots_parts.craft"
+
+merged_boots()
+crit_reforge()
+repeat limit 10 {
+    make_room()
+    beastcraft lock_suffixes
+    veiled_exalt
+    if not has "Redeemer: elusive" { harvest reforge critical }
+} until has "Redeemer: elusive" or not has "Hunter: tailwind" elevated or not has "Redeemer: onslaught" elevated
+if has "VeiledPrefix" or has "VeiledSuffix" {
+    unveil "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently",
+           "JunMasterVeiledMovementVelocityAndOnslaughtOnKill",
+           "JunMasterVeiledMovementVelocityAndCannotBeChilled__"
+}
+if crafted_count > 0 { remove_crafted }    # drop the leftover metamod (bench, ~free)
+if not has "movement speed" and open_prefix >= 1
+   and not has "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently"
+   and not has "JunMasterVeiledMovementVelocityAndOnslaughtOnKill"
+   and not has "JunMasterVeiledMovementVelocityAndCannotBeChilled__" {
+    craft "EinharMasterMovementVelocity3"
+}
+
+goal has "Hunter: tailwind" elevated and has "Redeemer: onslaught" elevated and has "Redeemer: elusive"
+     and (has "movement speed" or has "bench movement speed"
+          or has "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently"
+          or has "JunMasterVeiledMovementVelocityAndOnslaughtOnKill"
+          or has "JunMasterVeiledMovementVelocityAndCannotBeChilled__")
+track "unveiled Chosen movement speed (25-30%)" has "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently"
+     or has "JunMasterVeiledMovementVelocityAndOnslaughtOnKill" or has "JunMasterVeiledMovementVelocityAndCannotBeChilled__"

@@ -48,7 +48,9 @@ buy "<base>" [normal|magic|rare] [ilvl N] [influence <i>[, <i>]]
 | `awaken <name>` | Awakener's Orb: destroy set-aside item `<name>`, current item is the target |
 | `fracture` | Fracturing Orb |
 | `essence "<name>"` | e.g. `essence "Deafening Essence of Greed"` |
-| `veiled_exalt` | not implemented yet (raises a clear error) |
+| `veiled_exalt` | Veiled Exalted Orb: removes a random (unprotected) mod, adds a veiled affix |
+| `unveil "<mod>"[, "<mod>"...]` | unveil: 3 offers by weight; takes the first listed mod that is offered |
+| `foulborn_exalt` | UNVERIFIED stand-in: adds a random suffix |
 
 ### Crafting bench
 ```
@@ -114,6 +116,11 @@ def elevate_hunter(mod) {            # parameters are strings, used where a mod 
 elevate_hunter("Hunter: attack crit")
 ```
 Calls are expanded inline, and recursion is rejected.
+
+### Rule switches (top level)
+```
+rule reforge_fills_locked_side on    # see docs/known-discrepancies.md #5
+```
 
 ### Goal and tracked outcomes (top level)
 ```

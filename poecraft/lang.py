@@ -132,6 +132,7 @@ class Program:
     goal: object = None
     name: str = ""
     tracks: list = field(default_factory=list)
+    rules: dict = field(default_factory=dict)
 
 
 # conditions: tuples
@@ -144,13 +145,13 @@ SIMPLE_ACTIONS = {
     "augment": "augment", "regal": "regal", "alch": "alchemy", "alchemy": "alchemy", "chaos": "chaos",
     "exalt": "exalt", "annul": "annul", "scour": "scour", "dominance": "dominance",
     "orb_of_dominance": "dominance", "fracture": "fracture", "veiled_exalt": "veiled_exalt",
-    "remove_crafted": "remove_crafted",
+    "remove_crafted": "remove_crafted", "foulborn_exalt": "foulborn_exalt",
 }
 CONQ_ACTIONS = {"hunter_exalt": "hunter", "warlord_exalt": "warlord", "redeemer_exalt": "redeemer",
                 "crusader_exalt": "crusader"}
 METRICS = {"prefix_count", "suffix_count", "mod_count", "open_prefix", "open_suffix", "open_prefixes",
            "open_suffixes", "influenced_count", "elevated_count", "crafted_count", "links"}
-KEYWORDS = {"track", "if", "else", "repeat", "until", "while", "foresee", "accept", "otherwise", "def", "include",
+KEYWORDS = {"rule", "track", "if", "else", "repeat", "until", "while", "foresee", "accept", "otherwise", "def", "include",
             "goal", "and", "or", "not", "has", "with", "for", "limit"}
 
 
@@ -162,6 +163,7 @@ class Parser:
         self.defs = defs if defs is not None else {}
         self.goal = None
         self.tracks = []
+        self.rules = {}
         self.include_stack = include_stack
 
     # -- token helpers
@@ -204,7 +206,7 @@ class Parser:
             st = self.statement(top=True)
             if st is not None:
                 body.append(st)
-        return Program(Seq(1, self.file, body), self.defs, self.goal, tracks=self.tracks)
+        return Program(Seq(1, self.file, body), self.defs, self.goal, tracks=self.tracks, rules=self.rules)
 
     def block(self):
         start = self.expect("op", "{", "'{'")
@@ -270,6 +272,14 @@ class Parser:
             self.next()
             self.goal = self.condition()
             return None
+        if w == "rule":
+            self.next()
+            name = self.expect("name", what="a rule name").val
+            val = self.expect("name", what="on or off").val
+            if val not in ("on", "off"):
+                raise self.err("rule value must be 'on' or 'off'")
+            self.rules[name] = val == "on"
+            return None
         if w == "track":
             self.next()
             label = self.expect("str", what="a label string").val
@@ -288,6 +298,11 @@ class Parser:
             return Act(line, self.file, "take", {"name": self.expect("name", what="the name of a set-aside item").val})
         if w == "awaken":
             return Act(line, self.file, "awaken", {"donor": self.expect("name", what="the set-aside donor item").val})
+        if w == "unveil":
+            prefs = [self.string_or_param("a mod name")]
+            while self.accept("op", ","):
+                prefs.append(self.string_or_param("a mod name"))
+            return Act(line, self.file, "unveil", {"prefer": prefs})
         if w == "essence":
             return Act(line, self.file, "essence", {"name": self.string_or_param("an essence name")})
         if w == "craft":
@@ -357,7 +372,7 @@ class Parser:
             return Call(line, self.file, w, args)
         hint = _suggest(w, list(SIMPLE_ACTIONS) + list(CONQ_ACTIONS) + [
             "buy", "set_aside", "take", "awaken", "essence", "craft", "beastcraft", "harvest", "omen",
-            "pay", "fail", "succeed", "show", "repeat", "until", "while", "if", "foresee", "goal", "def", "include"])
+            "pay", "fail", "succeed", "show", "unveil", "rule", "track", "repeat", "until", "while", "if", "foresee", "goal", "def", "include"])
         raise RecipeError(f"unknown statement '{w}'.{hint} (Sub-recipe calls need parentheses: {w}(...))",
                           line, self.file)
 
@@ -570,7 +585,7 @@ def parse(src, file=None) -> Program:
     goal = _subst(prog.goal, {}) if prog.goal else None
     tracks = [(lbl, _subst(c, {})) for lbl, c in prog.tracks]
     return Program(body, prog.defs, goal, name=os.path.splitext(os.path.basename(file))[0] if file else "recipe",
-                   tracks=tracks)
+                   tracks=tracks, rules=prog.rules)
 
 
 def parse_file(path) -> Program:

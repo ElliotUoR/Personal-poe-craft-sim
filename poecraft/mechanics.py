@@ -41,6 +41,19 @@ class RandomChooser:
         return options[self.rng.randrange(len(options))]
 
 
+# ---------------------------------------------------------------- rule switches
+# Rules whose in-game behaviour is disputed. Recipes can flip them with `rule <name> on|off`.
+DEFAULT_RULES = {
+    # Can a Harvest reforge ADD new mods into open slots on the side protected by a
+    # "Cannot Be Changed" metamod? Default off = in-game testing (user): "the protected side is
+    # left untouched". Sanavixx "Endgame Speed Boots" step 3 (reforge Physical with suffixes
+    # locked to gain a Hunter *suffix*) and step 6 (fill suffixes before the locked reforge)
+    # only make sense if this is ON. See docs/known-discrepancies.md #5.
+    "reforge_fills_locked_side": False,
+}
+RULES = dict(DEFAULT_RULES)
+
+
 # ---------------------------------------------------------------- constants
 # Number of affixes on a freshly rolled rare (Chaos/Alchemy/reforge/Awakener fill).
 # UNVERIFIED: commonly cited community figures (as used by Craft of Exile):
@@ -358,7 +371,10 @@ def harvest_reforge(item, ch, tag):
     _require(item.rarity == "rare", "Harvest reforge needs a rare item.")
     keep = tuple(r for r in item.mods if not _removable(item, r) and r.id not in METAMODS)
     base = item.with_mods(keep)
-    sides = tuple(g for g in ("prefix", "suffix") if not item.locked_side(g))
+    if RULES["reforge_fills_locked_side"]:
+        sides = ("prefix", "suffix")
+    else:
+        sides = tuple(g for g in ("prefix", "suffix") if not item.locked_side(g))
     mods, weights = pool(base, sides=sides, tag=tag)
     _require(mods, f"Harvest reforge {tag}: no {tag} modifier can roll on the changeable side(s) of this item.")
     first = ch.weighted(mods, weights)
@@ -477,8 +493,57 @@ def fracture(item, ch):
 
 
 def veiled_exalt(item, ch):
-    """Veiled Exalted Orb (PoEDB, current text): 'Removes a random modifier and adds a
-    random Veiled modifier to a rare item'. NOT IMPLEMENTED: veiled mod pools and
-    unveil choices are not in RePoE's mods.json in a usable form."""
-    raise CraftError("veiled_exalt is not implemented yet (veiled/unveil mod pools are missing). "
-                     "See README 'Unverified / missing mechanics'.")
+    """Veiled Exalted Orb. PoEDB (current text): 'Removes a random modifier and adds a
+    random Veiled modifier to a rare item'.
+    UNVERIFIED: the removal respects metamods/fractured mods like an Annulment (Sanavixx
+    "Endgame Speed Boots" step 8 relies on this); the veiled affix goes to a uniformly
+    chosen side with an open slot after the removal."""
+    _require(item.rarity == "rare", "Veiled Exalted Orb needs a rare item.")
+    cands = [r for r in item.mods if _removable(item, r)]
+    _require(cands, "Veiled Exalted Orb: no removable modifier.")
+    victim = ch.uniform(cands)
+    it = item.with_mods(tuple(r for r in item.mods if r != victim))
+    sides = [g for g in ("prefix", "suffix") if it.open_slots(_gd, g) > 0]
+    side = ch.uniform(sides)
+    return it.with_mods(it.mods + (Roll("VeiledPrefix" if side == "prefix" else "VeiledSuffix"),))
+
+
+UNVEIL_OPTIONS = 3
+
+
+def unveil(item, ch, preferences):
+    """Unveil (Jun): the veiled affix becomes one of UNVEIL_OPTIONS offered unveiled mods.
+    UNVERIFIED: options are drawn by RePoE unveiled spawn weight without replacement,
+    skipping mod groups already on the item; the player takes the first mod in
+    ``preferences`` (list of family keys) that is offered, otherwise the first offer."""
+    gd = _gd
+    veiled = [r for r in item.mods if r.id in ("VeiledPrefix", "VeiledSuffix")]
+    _require(veiled, "unveil: the item has no veiled modifier.")
+    v = veiled[0]
+    gen = "prefix" if v.id == "VeiledPrefix" else "suffix"
+    rest = item.with_mods(tuple(r for r in item.mods if r != v))
+    present = rest.groups(gd)
+    pool_ = [(m, w) for m, w in gd.unveil_pool(item.base, item.influences, item.ilvl, gen)
+             if not (set(gd.mods[m].groups) & present)]
+    _require(pool_, "unveil: no unveiled modifier can appear.")
+    offers = []
+    while pool_ and len(offers) < UNVEIL_OPTIONS:
+        m = ch.weighted([p[0] for p in pool_], [p[1] for p in pool_])
+        offers.append(m)
+        pool_ = [p for p in pool_ if not (set(gd.mods[p[0]].groups) & set(gd.mods[m].groups))]
+    choice = offers[0]
+    for fam in preferences:
+        hit = [m for m in offers if gd.family_key(m) == fam]
+        if hit:
+            choice = hit[0]
+            break
+    return rest.with_mods(rest.mods + (Roll(choice, crafted=False),))
+
+
+def foulborn_exalt(item, ch):
+    """Foulborn Exalted Orb (Covens-era currency). NOT on PoEDB pages fetched; modelled
+    UNVERIFIED as 'adds one random suffix' because Sanavixx uses it to fill suffixes."""
+    _require(item.rarity == "rare", "Foulborn Exalted Orb needs a rare item.")
+    nxt = add_random_mod(item, ch, sides=("suffix",))
+    _require(nxt is not None, "Foulborn Exalted Orb: no open suffix.")
+    return nxt

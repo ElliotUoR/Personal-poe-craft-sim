@@ -110,6 +110,7 @@ def main(argv=None):
             "text": m.get("text") or "",
             "essence_only": m.get("is_essence_only", False),
             "adds_tags": m.get("adds_tags", []),
+            "domain": m["domain"],
         }
 
     for mid, m in mods.items():
@@ -119,6 +120,14 @@ def main(argv=None):
         spawnable = any(s["weight"] > 0 and s["tag"] in relevant_tags for s in m["spawn_weights"])
         elevated = "Elevated" in m["name"] and (tags_here & {t for c in out_classes.values() for t in c["influence_tags"]})
         if spawnable or elevated:
+            keep[mid] = slim(mid, m)
+
+    # Unveiled mods (Betrayal/Jun "Veiled" crafting) and the veiled placeholders.
+    for mid, m in mods.items():
+        if m["domain"] == "unveiled" and m["generation_type"] in ("prefix", "suffix"):
+            if any(sw["weight"] > 0 and sw["tag"] in relevant_tags for sw in m["spawn_weights"]):
+                keep[mid] = slim(mid, m)
+        if mid in ("VeiledPrefix", "VeiledSuffix"):
             keep[mid] = slim(mid, m)
 
     out_ess = {}

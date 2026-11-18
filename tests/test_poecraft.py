@@ -198,3 +198,35 @@ def test_recipe_runs(path):
     prog = parse_file(path)
     for s in range(3):
         ENG.run_mc(prog, seed=s)
+
+
+def test_veiled_exalt_with_suffix_lock_only_hits_prefixes_and_unveil_offers_ms():
+    b = GD.resolve_base("Two-Toned Boots")
+    tw = GD.families[GD.resolve_mod("Hunter: tailwind", "Boots")].elevated
+    on = GD.families[GD.resolve_mod("Redeemer: onslaught", "Boots")].elevated
+    el = GD.families[GD.resolve_mod("Redeemer: elusive", "Boots")].tiers[0]
+    it = Item(b, 84, "rare", frozenset({"hunter", "redeemer"})).with_mods(
+        (Roll(tw), Roll(on), Roll(el), Roll("FireResist5"), Roll(SUFFIX_LOCK, crafted=True)))
+    ms = GD.resolve_mod("JunMasterVeiledMovementVelocityAndOnslaughtOnKill", "Boots")
+    ch = M.RandomChooser(5)
+    got_ms = 0
+    for _ in range(300):
+        v = M.veiled_exalt(it, ch)
+        assert v.has_mod(tw) and v.has_mod(on) and v.has_mod("VeiledPrefix")
+        u = M.unveil(v, ch, [ms])
+        got_ms += any("MovementVelocity" in r.id for r in u.mods)
+    assert got_ms > 150  # ~66% of unveils offer a Chosen MS mod
+
+
+def test_rule_switch_reforge_fills_locked_side():
+    src = '''
+rule reforge_fills_locked_side on
+buy "Two-Toned Boots" ilvl 84 rare influence hunter with "Hunter: tailwind"
+craft lock_suffixes
+harvest reforge physical
+goal has "Hunter: tailwind" and count(hunter) >= 2
+'''
+    prog = parse(src)
+    assert ENG.run_mc(prog, seed=1).success
+    with pytest.raises(RecipeError):  # default rule: no physical prefix can roll
+        ENG.run_mc(parse(src.replace("rule reforge_fills_locked_side on", "")), seed=1)
