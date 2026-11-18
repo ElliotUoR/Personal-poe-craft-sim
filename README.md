@@ -28,6 +28,12 @@ python -m pytest -q
 python tools/parity_engine.py                 # Rust vs Python on every recipe
 ```
 
+Item text (spec phase 2, started 2026-11-18): `poecraft sample RECIPE --pob` prints the crafted
+item as Path of Building text (paste via Items > Create custom), and `poecraft parse-item FILE|-`
+reads PoB or in-game clipboard text (incl. Ctrl+Alt+C advanced copy) back into a crafting item.
+Checked end to end through PoB itself: PoB reads the export with both influences, and our parser
+recovers the identical item from PoB's re-export.
+
 Every Rust result lists the unverified or disputed rules it depends on (see `poecraft rules`
 and docs/spec.md §7). Rust-only additions so far: partial locks (`craft lock_1_suffix`,
 `lock_2_suffixes`, `lock_1_prefix`, `lock_2_prefixes`), "cannot roll attack/caster modifiers"

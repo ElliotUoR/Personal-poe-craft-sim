@@ -16,7 +16,11 @@ fn prices() -> Prices {
     Prices::load(&root().join("data"), &[], false).unwrap()
 }
 fn budget() -> Budget {
-    Budget { paths: 1_000_000, states: 20_000, deadline: Instant::now() + Duration::from_secs(60) }
+    Budget {
+        paths: 1_000_000,
+        states: 20_000,
+        deadline: Instant::now() + Duration::from_secs(60),
+    }
 }
 
 const SMALL: &str = r#"
@@ -33,7 +37,9 @@ fn geometric_loop_exact() {
     let gd = default_data();
     let pr = prices();
     let prog = parse(SMALL, None).unwrap();
-    let ex = exact_stats(gd, &pr, &prog, budget(), &mut RuleUse::default()).unwrap().unwrap();
+    let ex = exact_stats(gd, &pr, &prog, budget(), &mut RuleUse::default())
+        .unwrap()
+        .unwrap();
     let dom = pr.get("dominance");
     assert!((ex.mean_counts["dominance"] - 2.0).abs() < 1e-9);
     assert!((ex.mean_chaos - 2.0 * (dom + 50.0)).abs() < 1e-6);
@@ -45,9 +51,16 @@ fn geometric_loop_exact() {
 fn exact_and_monte_carlo_agree_on_test_recipes() {
     let gd = default_data();
     let pr = prices();
-    for f in ["dominance_2mods", "dominance_loop", "three_mods", "alt_spam"] {
+    for f in [
+        "dominance_2mods",
+        "dominance_loop",
+        "three_mods",
+        "alt_spam",
+    ] {
         let prog = parse_file(&root().join(format!("recipes/tests/{f}.craft"))).unwrap();
-        let ex = exact_stats(gd, &pr, &prog, budget(), &mut RuleUse::default()).unwrap().unwrap();
+        let ex = exact_stats(gd, &pr, &prog, budget(), &mut RuleUse::default())
+            .unwrap()
+            .unwrap();
         let mc = mc_stats(gd, &pr, &prog, 4000, 7, &mut RuleUse::default()).unwrap();
         let (ok, msg) = check_agreement(&ex, &mc, 4.0);
         assert!(ok, "{f}: {msg}");
@@ -60,7 +73,19 @@ fn chest_pieces_need_two_dominance_each() {
     let pr = prices();
     for f in ["chest_hunter_piece", "chest_warlord_piece"] {
         let prog = parse_file(&root().join(format!("recipes/{f}.craft"))).unwrap();
-        let rep = analyse(gd, &pr, &prog, &Options { runs: 2000, mode: Mode::Exact, seed: 0, exact_seconds: 60, progress: None }).unwrap();
+        let rep = analyse(
+            gd,
+            &pr,
+            &prog,
+            &Options {
+                runs: 2000,
+                mode: Mode::Exact,
+                seed: 0,
+                exact_seconds: 60,
+                progress: None,
+            },
+        )
+        .unwrap();
         let dom = rep.mean_counts["dominance"];
         assert!((dom - 2.0).abs() < 0.05, "{f}: {dom} Dominance");
     }
@@ -71,7 +96,11 @@ fn err(src: &str) -> String {
     let pr = prices();
     match parse(src, None) {
         Err(e) => e.to_string(),
-        Ok(prog) => Engine::new(gd, &pr, Engine::switches_for(&prog).unwrap()).run_mc(&prog, 0, 200_000, None).err().map(|e| e.to_string()).unwrap_or_default(),
+        Ok(prog) => Engine::new(gd, &pr, Engine::switches_for(&prog).unwrap())
+            .run_mc(&prog, 0, 200_000, None)
+            .err()
+            .map(|e| e.to_string())
+            .unwrap_or_default(),
     }
 }
 
@@ -80,10 +109,22 @@ fn error_messages() {
     assert!(err("buy \"Astral Plate\"\ndominanse").contains("Did you mean: dominance"));
     assert!(err("chaos").contains("start with 'buy'"));
     let m = err("buy \"Astral Plate\" ilvl 86\nregal");
-    assert!(m.contains(":2:") && m.contains("Regal Orb needs a magic item"), "{m}");
-    assert!(err("buy \"Astral Plate\" rare with \"Hunter: additional curse\"").contains("add \"influence hunter\""));
-    assert!(err("buy \"Astral Plate\" ilvl 86 magic\nrepeat { alt } until has \"Hunter: additional curse\"").contains("can never finish"));
-    assert!(err("buy \"Astral Plate\" ilvl 86 rare\nharvest reforge cast").contains("Unknown Harvest reforge tag"));
+    assert!(
+        m.contains(":2:") && m.contains("Regal Orb needs a magic item"),
+        "{m}"
+    );
+    assert!(
+        err("buy \"Astral Plate\" rare with \"Hunter: additional curse\"")
+            .contains("add \"influence hunter\"")
+    );
+    assert!(err(
+        "buy \"Astral Plate\" ilvl 86 magic\nrepeat { alt } until has \"Hunter: additional curse\""
+    )
+    .contains("can never finish"));
+    assert!(
+        err("buy \"Astral Plate\" ilvl 86 rare\nharvest reforge cast")
+            .contains("Unknown Harvest reforge tag")
+    );
 }
 
 #[test]
@@ -99,7 +140,8 @@ fn every_shipped_recipe_runs() {
         }
         let eng = Engine::new(gd, &pr, Engine::switches_for(&prog).unwrap());
         for s in 0..5 {
-            eng.run_mc(&prog, s, 200_000, None).unwrap_or_else(|e| panic!("{}: {e}", entry.display()));
+            eng.run_mc(&prog, s, 200_000, None)
+                .unwrap_or_else(|e| panic!("{}: {e}", entry.display()));
         }
         n += 1;
     }

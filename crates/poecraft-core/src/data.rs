@@ -72,13 +72,18 @@ impl Influence {
         }
     }
     pub fn parse(s: &str) -> Option<Influence> {
-        Influence::ALL.into_iter().find(|i| i.name() == s.to_ascii_lowercase())
+        Influence::ALL
+            .into_iter()
+            .find(|i| i.name() == s.to_ascii_lowercase())
     }
     pub fn bit(self) -> u8 {
         1 << (self as u8)
     }
     pub fn is_conqueror(self) -> bool {
-        matches!(self, Influence::Crusader | Influence::Redeemer | Influence::Hunter | Influence::Warlord)
+        matches!(
+            self,
+            Influence::Crusader | Influence::Redeemer | Influence::Hunter | Influence::Warlord
+        )
     }
 }
 
@@ -102,7 +107,9 @@ impl Influences {
         self.0 == 0
     }
     pub fn iter(self) -> impl Iterator<Item = Influence> {
-        Influence::ALL.into_iter().filter(move |i| self.contains(*i))
+        Influence::ALL
+            .into_iter()
+            .filter(move |i| self.contains(*i))
     }
 }
 
@@ -172,7 +179,11 @@ pub enum MetaKind {
 }
 
 fn meta_kind(typ: &str, text: &str) -> Option<MetaKind> {
-    let count = || text.split_whitespace().next().and_then(|w| w.parse::<u8>().ok());
+    let count = || {
+        text.split_whitespace()
+            .next()
+            .and_then(|w| w.parse::<u8>().ok())
+    };
     match typ {
         "ItemGenerationCannotChangePrefixes" => Some(MetaKind::LockPrefixes(None)),
         "ItemGenerationCannotChangeSuffixes" => Some(MetaKind::LockSuffixes(None)),
@@ -270,7 +281,9 @@ struct RawBase {
     #[serde(default)]
     properties: serde_json::Value,
 }
-fn null_as_default<'de, D: serde::Deserializer<'de>, T: Default + Deserialize<'de>>(d: D) -> Result<T, D::Error> {
+fn null_as_default<'de, D: serde::Deserializer<'de>, T: Default + Deserialize<'de>>(
+    d: D,
+) -> Result<T, D::Error> {
     Ok(Option::<T>::deserialize(d)?.unwrap_or_default())
 }
 fn default_domain() -> String {
@@ -352,7 +365,10 @@ fn normalise_type(t: &str) -> String {
     }
     let core = &s[..end];
     if let Some(stripped) = core.strip_suffix("Maven") {
-        stripped.strip_suffix("Influence").unwrap_or(stripped).to_string()
+        stripped
+            .strip_suffix("Influence")
+            .unwrap_or(stripped)
+            .to_string()
     } else {
         t.to_string()
     }
@@ -360,8 +376,10 @@ fn normalise_type(t: &str) -> String {
 
 impl GameData {
     pub fn load(path: &Path) -> Result<GameData, DataError> {
-        let txt = std::fs::read_to_string(path).map_err(|e| DataError(format!("cannot read {}: {e}", path.display())))?;
-        let raw: RawData = serde_json::from_str(&txt).map_err(|e| DataError(format!("bad game data: {e}")))?;
+        let txt = std::fs::read_to_string(path)
+            .map_err(|e| DataError(format!("cannot read {}: {e}", path.display())))?;
+        let raw: RawData =
+            serde_json::from_str(&txt).map_err(|e| DataError(format!("bad game data: {e}")))?;
         let data_dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
 
         let mut tags: Vec<String> = Vec::new();
@@ -415,9 +433,20 @@ impl GameData {
         let mut mods = Vec::new();
         let mut mod_index = FxHashMap::default();
         for (id, m) in &raw.mods {
-            let influence = m.spawn.iter().find_map(|(t, _)| infl_of_tag.get(t).copied());
-            let spawn = m.spawn.iter().map(|(t, w)| (intern(t, &mut tags), *w)).collect();
-            let genw = m.genw.iter().map(|(t, w)| (intern(t, &mut tags), *w)).collect();
+            let influence = m
+                .spawn
+                .iter()
+                .find_map(|(t, _)| infl_of_tag.get(t).copied());
+            let spawn = m
+                .spawn
+                .iter()
+                .map(|(t, w)| (intern(t, &mut tags), *w))
+                .collect();
+            let genw = m
+                .genw
+                .iter()
+                .map(|(t, w)| (intern(t, &mut tags), *w))
+                .collect();
             let tag_ids = m.tags.iter().map(|t| intern(t, &mut tags)).collect();
             let group_ids = m
                 .groups
@@ -453,7 +482,11 @@ impl GameData {
                 stats: m.stats.clone(),
                 group_ids,
                 tag_ids,
-                meta: if bench_mods.contains(id.as_str()) { meta_kind(&m.typ, &m.text) } else { None },
+                meta: if bench_mods.contains(id.as_str()) {
+                    meta_kind(&m.typ, &m.text)
+                } else {
+                    None
+                },
             });
         }
 
@@ -466,14 +499,22 @@ impl GameData {
                 level: e.level,
                 item_level_restriction: e.item_level_restriction,
                 // Remnant of Corruption etc. have null mods
-                mods: e.mods.iter().filter_map(|(k, v)| v.clone().map(|v| (k.clone(), v))).collect(),
+                mods: e
+                    .mods
+                    .iter()
+                    .filter_map(|(k, v)| v.clone().map(|v| (k.clone(), v)))
+                    .collect(),
             })
             .collect();
         let bench = raw
             .bench
             .iter()
             .filter_map(|b| {
-                mod_index.get(&b.module).map(|&mi| BenchOption { module: mi, classes: b.classes.clone(), cost: b.cost.clone() })
+                mod_index.get(&b.module).map(|&mi| BenchOption {
+                    module: mi,
+                    classes: b.classes.clone(),
+                    cost: b.cost.clone(),
+                })
             })
             .collect();
 
@@ -516,7 +557,9 @@ impl GameData {
             influence: if m.crafted {
                 "crafted".into()
             } else {
-                m.influence.map(|i| i.name().to_string()).unwrap_or_default()
+                m.influence
+                    .map(|i| i.name().to_string())
+                    .unwrap_or_default()
             },
             typ: normalise_type(&m.typ),
         }
@@ -530,14 +573,22 @@ impl GameData {
             }
             let key = self.raw_family_key(m);
             let crafted = m.crafted || m.domain == "veiled";
-            let fam = fams.entry(key.clone()).or_insert_with(|| Family { key, crafted, tiers: vec![], elevated: None });
+            let fam = fams.entry(key.clone()).or_insert_with(|| Family {
+                key,
+                crafted,
+                tiers: vec![],
+                elevated: None,
+            });
             if crafted {
                 fam.tiers.push(i as ModIdx);
                 continue;
             }
             if m.elevated {
                 fam.elevated = Some(i as ModIdx);
-            } else if m.spawn.iter().any(|(_, w)| *w > 0) || m.essence_only || m.domain == "unveiled" {
+            } else if m.spawn.iter().any(|(_, w)| *w > 0)
+                || m.essence_only
+                || m.domain == "unveiled"
+            {
                 fam.tiers.push(i as ModIdx);
             }
         }
@@ -557,7 +608,11 @@ impl GameData {
             let matches: Vec<FamilyKey> = fams
                 .iter()
                 .filter(|(k, f)| {
-                    k.gen == key.gen && k.group == key.group && k.influence == key.influence && !f.tiers.is_empty() && f.elevated.is_none()
+                    k.gen == key.gen
+                        && k.group == key.group
+                        && k.influence == key.influence
+                        && !f.tiers.is_empty()
+                        && f.elevated.is_none()
                 })
                 .map(|(k, _)| k.clone())
                 .collect();
@@ -569,13 +624,26 @@ impl GameData {
         }
         for f in fams.values_mut() {
             let mods = &self.mods;
-            f.tiers.sort_by(|a, b| mods[*b as usize].level.cmp(&mods[*a as usize].level).then(mods[*a as usize].id.cmp(&mods[*b as usize].id)));
+            f.tiers.sort_by(|a, b| {
+                mods[*b as usize]
+                    .level
+                    .cmp(&mods[*a as usize].level)
+                    .then(mods[*a as usize].id.cmp(&mods[*b as usize].id))
+            });
         }
         self.families = fams.into_values().collect();
-        self.family_index = self.families.iter().enumerate().map(|(i, f)| (f.key.clone(), i as FamIdx)).collect();
+        self.family_index = self
+            .families
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (f.key.clone(), i as FamIdx))
+            .collect();
         self.family_of = vec![NO_FAMILY; self.mods.len()];
         for (i, m) in self.mods.iter().enumerate() {
-            let key = overrides.get(&(i as ModIdx)).cloned().unwrap_or_else(|| self.raw_family_key(m));
+            let key = overrides
+                .get(&(i as ModIdx))
+                .cloned()
+                .unwrap_or_else(|| self.raw_family_key(m));
             if let Some(&fi) = self.family_index.get(&key) {
                 self.family_of[i] = fi;
             }
@@ -606,7 +674,9 @@ impl GameData {
 
     /// The bench option of this meta kind available for an item class.
     pub fn metamod_for(&self, cls: &str, kind: MetaKind) -> Option<&BenchOption> {
-        self.bench.iter().find(|b| self.m(b.module).meta == Some(kind) && b.classes.iter().any(|c| c == cls))
+        self.bench
+            .iter()
+            .find(|b| self.m(b.module).meta == Some(kind) && b.classes.iter().any(|c| c == cls))
     }
 
     pub fn item_class(&self, b: BaseIdx) -> &str {
@@ -618,7 +688,11 @@ impl GameData {
         let suffix = format!("_{}", inf.tag_suffix());
         self.class_influence_tags
             .get(cls)
-            .and_then(|v| v.iter().copied().find(|t| self.tags[*t as usize].ends_with(&suffix)))
+            .and_then(|v| {
+                v.iter()
+                    .copied()
+                    .find(|t| self.tags[*t as usize].ends_with(&suffix))
+            })
             .ok_or_else(|| DataError(format!("{cls} items cannot have {} influence", inf.name())))
     }
 
@@ -642,7 +716,11 @@ impl GameData {
         }
         let base = self.base(b);
         let cls = &base.item_class;
-        let ess: FxHashSet<&str> = self.essences.iter().filter_map(|e| e.mods.get(cls).map(|s| s.as_str())).collect();
+        let ess: FxHashSet<&str> = self
+            .essences
+            .iter()
+            .filter_map(|e| e.mods.get(cls).map(|s| s.as_str()))
+            .collect();
         let out: Vec<ModIdx> = self.families[fam as usize]
             .tiers
             .iter()
@@ -654,7 +732,10 @@ impl GameData {
             })
             .collect();
         let arc = std::sync::Arc::new(out);
-        self.tiers_cache.lock().unwrap().insert((fam, b), arc.clone());
+        self.tiers_cache
+            .lock()
+            .unwrap()
+            .insert((fam, b), arc.clone());
         arc
     }
 
@@ -673,13 +754,22 @@ impl GameData {
         if let Some(p) = t.iter().position(|&x| x == mi) {
             return p as u32 + 1;
         }
-        fam.tiers.iter().position(|&x| x == mi).map(|p| p as u32 + 1).unwrap_or(1)
+        fam.tiers
+            .iter()
+            .position(|&x| x == mi)
+            .map(|p| p as u32 + 1)
+            .unwrap_or(1)
     }
 
     /// All (mod, weight) that can naturally roll on this base with these influences at this
     /// item level, ignoring the mods already on the item. Weight = first matching spawn tag,
     /// times the first matching generation-weight multiplier (percent).
-    pub fn spawn_pool(&self, b: BaseIdx, infl: Influences, ilvl: u32) -> std::sync::Arc<Vec<(ModIdx, u32)>> {
+    pub fn spawn_pool(
+        &self,
+        b: BaseIdx,
+        infl: Influences,
+        ilvl: u32,
+    ) -> std::sync::Arc<Vec<(ModIdx, u32)>> {
         let key = (b, infl, ilvl);
         if let Some(v) = self.pool_cache.lock().unwrap().get(&key) {
             return v.clone();
@@ -693,7 +783,13 @@ impl GameData {
         }
         let mut out = Vec::new();
         for (i, m) in self.mods.iter().enumerate() {
-            if m.crafted || m.essence_only || m.elevated || m.level > ilvl || m.domain != base.domain || m.gen == Gen::Other {
+            if m.crafted
+                || m.essence_only
+                || m.elevated
+                || m.level > ilvl
+                || m.domain != base.domain
+                || m.gen == Gen::Other
+            {
                 continue;
             }
             let mut w = 0u32;
@@ -723,7 +819,13 @@ impl GameData {
     }
 
     /// Unveiled mods that can appear when unveiling a veiled affix of side `gen` here.
-    pub fn unveil_pool(&self, b: BaseIdx, infl: Influences, ilvl: u32, gen: Gen) -> Vec<(ModIdx, u32)> {
+    pub fn unveil_pool(
+        &self,
+        b: BaseIdx,
+        infl: Influences,
+        ilvl: u32,
+        gen: Gen,
+    ) -> Vec<(ModIdx, u32)> {
         let base = self.base(b);
         let mut tags: FxHashSet<TagIdx> = base.tags.iter().copied().collect();
         for i in infl.iter() {
@@ -736,7 +838,12 @@ impl GameData {
             if m.domain != "unveiled" || m.gen != gen || m.level > ilvl {
                 continue;
             }
-            let w = m.spawn.iter().find(|(t, _)| tags.contains(t)).map(|x| x.1).unwrap_or(0);
+            let w = m
+                .spawn
+                .iter()
+                .find(|(t, _)| tags.contains(t))
+                .map(|x| x.1)
+                .unwrap_or(0);
             if w > 0 {
                 out.push((i as ModIdx, w));
             }
@@ -751,12 +858,33 @@ impl GameData {
             return Ok(b);
         }
         let low = name.to_lowercase();
-        let mut hits: Vec<&Base> = self.bases.iter().filter(|b| b.name.to_lowercase() == low).collect();
+        let mut hits: Vec<&Base> = self
+            .bases
+            .iter()
+            .filter(|b| b.name.to_lowercase() == low)
+            .collect();
         if hits.is_empty() {
-            let mut close: Vec<&str> = self.bases.iter().filter(|b| b.name.to_lowercase().contains(&low)).map(|b| b.name.as_str()).collect();
+            let mut close: Vec<&str> = self
+                .bases
+                .iter()
+                .filter(|b| b.name.to_lowercase().contains(&low))
+                .map(|b| b.name.as_str())
+                .collect();
             close.sort();
             close.dedup();
-            let hint = if close.is_empty() { String::new() } else { format!(" Did you mean one of: {}?", close.iter().take(10).cloned().collect::<Vec<_>>().join(", ")) };
+            let hint = if close.is_empty() {
+                String::new()
+            } else {
+                format!(
+                    " Did you mean one of: {}?",
+                    close
+                        .iter()
+                        .take(10)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            };
             return Err(DataError(format!("Unknown base \"{name}\".{hint}")));
         }
         // several ids can share a name (e.g. Two-Toned Boots variants): first in id order
@@ -787,7 +915,11 @@ impl GameData {
     /// Resolve a readable mod reference to a family. Accepted forms (case-insensitive):
     /// an alias from data/aliases.json; a RePoE mod id; "<Influence>: <text>";
     /// "prefix: <text>" / "suffix: <text>"; any fragment of the in-game text.
-    pub fn resolve_mod(&self, reference: &str, item_class: Option<&str>) -> Result<FamIdx, DataError> {
+    pub fn resolve_mod(
+        &self,
+        reference: &str,
+        item_class: Option<&str>,
+    ) -> Result<FamIdx, DataError> {
         let mut r = reference.trim().to_string();
         if let Some(a) = self.aliases.get(&r.to_lowercase()) {
             r = a.clone();
@@ -853,7 +985,9 @@ impl GameData {
                     continue;
                 }
             }
-            if let Some(&hit) = ids.iter().find(|&&i| self.m(i).text.to_lowercase().contains(text) || self.m(i).id.to_lowercase() == text) {
+            if let Some(&hit) = ids.iter().find(|&&i| {
+                self.m(i).text.to_lowercase().contains(text) || self.m(i).id.to_lowercase() == text
+            }) {
                 cands.push((fi as FamIdx, hit));
             }
         }
@@ -884,8 +1018,18 @@ impl GameData {
 
     pub fn family_label(&self, fi: FamIdx) -> String {
         let f = &self.families[fi as usize];
-        let ex = f.tiers.first().copied().or(f.elevated).map(|m| self.m(m).short()).unwrap_or_default();
-        let inf = if f.key.influence.is_empty() { "normal".to_string() } else { f.key.influence.clone() };
+        let ex = f
+            .tiers
+            .first()
+            .copied()
+            .or(f.elevated)
+            .map(|m| self.m(m).short())
+            .unwrap_or_default();
+        let inf = if f.key.influence.is_empty() {
+            "normal".to_string()
+        } else {
+            f.key.influence.clone()
+        };
         format!("{} {} \"{}\"", title(&inf), f.key.gen.name(), ex)
     }
 }
@@ -900,9 +1044,14 @@ pub fn title(s: &str) -> String {
 
 fn load_aliases(dir: &Path) -> FxHashMap<String, String> {
     let p = dir.join("aliases.json");
-    let Ok(txt) = std::fs::read_to_string(&p) else { return FxHashMap::default() };
+    let Ok(txt) = std::fs::read_to_string(&p) else {
+        return FxHashMap::default();
+    };
     let v: BTreeMap<String, String> = serde_json::from_str(&txt).unwrap_or_default();
-    v.into_iter().filter(|(k, _)| !k.starts_with('_')).map(|(k, v)| (k.to_lowercase(), v)).collect()
+    v.into_iter()
+        .filter(|(k, _)| !k.starts_with('_'))
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect()
 }
 
 pub fn default_data_dir() -> Result<PathBuf, DataError> {
@@ -924,7 +1073,9 @@ pub fn default_data_dir() -> Result<PathBuf, DataError> {
             }
         }
     }
-    Err(DataError("cannot find data/gamedata.json (set POECRAFT_DATA to the data folder)".into()))
+    Err(DataError(
+        "cannot find data/gamedata.json (set POECRAFT_DATA to the data folder)".into(),
+    ))
 }
 
 static DEFAULT: OnceLock<GameData> = OnceLock::new();

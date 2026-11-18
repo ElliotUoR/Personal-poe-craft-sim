@@ -80,7 +80,9 @@ pub struct Switches {
 
 impl Default for Switches {
     fn default() -> Self {
-        Switches { reforge_fills_locked_side: true }
+        Switches {
+            reforge_fills_locked_side: true,
+        }
     }
 }
 
@@ -88,7 +90,11 @@ impl Switches {
     pub fn set(&mut self, name: &str, on: bool) -> Result<(), String> {
         match name {
             "reforge_fills_locked_side" => self.reforge_fills_locked_side = on,
-            _ => return Err(format!("unknown rule '{name}' (switchable: reforge_fills_locked_side)")),
+            _ => {
+                return Err(format!(
+                    "unknown rule '{name}' (switchable: reforge_fills_locked_side)"
+                ))
+            }
         }
         Ok(())
     }

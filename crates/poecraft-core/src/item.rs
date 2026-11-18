@@ -12,10 +12,18 @@ pub struct Roll {
 
 impl Roll {
     pub fn new(m: ModIdx) -> Roll {
-        Roll { m, fractured: false, crafted: false }
+        Roll {
+            m,
+            fractured: false,
+            crafted: false,
+        }
     }
     pub fn crafted(m: ModIdx) -> Roll {
-        Roll { m, fractured: false, crafted: true }
+        Roll {
+            m,
+            fractured: false,
+            crafted: true,
+        }
     }
 }
 
@@ -82,13 +90,27 @@ pub struct Item {
 
 impl Item {
     pub fn new(base: BaseIdx, ilvl: u32, rarity: Rarity, influences: Influences) -> Item {
-        Item { base, ilvl, rarity, influences, mods: vec![], preview_lock: false, links: 0, white_sockets: 0, tag: None }
+        Item {
+            base,
+            ilvl,
+            rarity,
+            influences,
+            mods: vec![],
+            preview_lock: false,
+            links: 0,
+            white_sockets: 0,
+            tag: None,
+        }
     }
 
     /// Copy with a new mod list (sorted); clears the Hinekora preview like any change.
     pub fn with_mods(&self, mut mods: Vec<Roll>) -> Item {
         mods.sort();
-        Item { mods, preview_lock: false, ..self.clone() }
+        Item {
+            mods,
+            preview_lock: false,
+            ..self.clone()
+        }
     }
 
     pub fn with_added(&self, r: Roll) -> Item {
@@ -137,7 +159,10 @@ impl Item {
     }
 
     pub fn is_metamod(gd: &GameData, m: ModIdx) -> bool {
-        matches!(gd.m(m).meta, Some(MetaKind::LockPrefixes(_) | MetaKind::LockSuffixes(_) | MetaKind::Multimod))
+        matches!(
+            gd.m(m).meta,
+            Some(MetaKind::LockPrefixes(_) | MetaKind::LockSuffixes(_) | MetaKind::Multimod)
+        )
     }
 
     /// How a metamod on the item protects `gen`.
@@ -145,7 +170,8 @@ impl Item {
         let mut best = Lock::None;
         for r in &self.mods {
             let l = match (gd.m(r.m).meta, gen) {
-                (Some(MetaKind::LockPrefixes(n)), Gen::Prefix) | (Some(MetaKind::LockSuffixes(n)), Gen::Suffix) => match n {
+                (Some(MetaKind::LockPrefixes(n)), Gen::Prefix)
+                | (Some(MetaKind::LockSuffixes(n)), Gen::Suffix) => match n {
                     None => Lock::Full,
                     Some(n) => Lock::Count(n),
                 },
@@ -167,12 +193,21 @@ impl Item {
             Lock::None => false,
             Lock::Full => true,
             // a partial lock that covers every mod of the side acts as a full lock
-            Lock::Count(n) => self.side(gd, gen).filter(|r| !Item::is_metamod(gd, r.m)).count() <= n as usize,
+            Lock::Count(n) => {
+                self.side(gd, gen)
+                    .filter(|r| !Item::is_metamod(gd, r.m))
+                    .count()
+                    <= n as usize
+            }
         }
     }
 
     pub fn influenced_mods(&self, gd: &GameData) -> Vec<Roll> {
-        self.mods.iter().filter(|r| gd.m(r.m).influence.is_some() && !r.crafted).copied().collect()
+        self.mods
+            .iter()
+            .filter(|r| gd.m(r.m).influence.is_some() && !r.crafted)
+            .copied()
+            .collect()
     }
 
     pub fn crafted_count(&self) -> usize {
@@ -180,7 +215,11 @@ impl Item {
     }
 
     pub fn group_ids(&self, gd: &GameData) -> Vec<u32> {
-        let mut v: Vec<u32> = self.mods.iter().flat_map(|r| gd.m(r.m).group_ids.iter().copied()).collect();
+        let mut v: Vec<u32> = self
+            .mods
+            .iter()
+            .flat_map(|r| gd.m(r.m).group_ids.iter().copied())
+            .collect();
         v.sort_unstable();
         v.dedup();
         v
@@ -190,8 +229,18 @@ impl Item {
         let b = gd.base(self.base);
         let mut inf: Vec<String> = self.influences.iter().map(|i| title(i.name())).collect();
         inf.sort();
-        let inf = if inf.is_empty() { "no influence".to_string() } else { inf.join("/") };
-        let mut lines = vec![format!("{} {} (ilvl {}, {})", title(self.rarity.name()), b.name, self.ilvl, inf)];
+        let inf = if inf.is_empty() {
+            "no influence".to_string()
+        } else {
+            inf.join("/")
+        };
+        let mut lines = vec![format!(
+            "{} {} (ilvl {}, {})",
+            title(self.rarity.name()),
+            b.name,
+            self.ilvl,
+            inf
+        )];
         for gen in [Gen::Prefix, Gen::Suffix] {
             for r in self.side(gd, gen) {
                 let m = gd.m(r.m);
@@ -204,8 +253,15 @@ impl Item {
                     format!("T{t}")
                 };
                 let fr = if r.fractured { " [fractured]" } else { "" };
-                let inf = m.influence.map(|i| format!("{} ", title(i.name()))).unwrap_or_default();
-                lines.push(format!("  {} {inf}{tier}{fr}: {}", if gen == Gen::Prefix { 'P' } else { 'S' }, m.short()));
+                let inf = m
+                    .influence
+                    .map(|i| format!("{} ", title(i.name())))
+                    .unwrap_or_default();
+                lines.push(format!(
+                    "  {} {inf}{tier}{fr}: {}",
+                    if gen == Gen::Prefix { 'P' } else { 'S' },
+                    m.short()
+                ));
             }
         }
         if self.preview_lock {

@@ -14,7 +14,11 @@ pub struct RecipeError {
 
 impl RecipeError {
     pub fn new(msg: impl Into<String>, line: Option<usize>, file: Option<Arc<str>>) -> Self {
-        RecipeError { msg: msg.into(), line, file }
+        RecipeError {
+            msg: msg.into(),
+            line,
+            file,
+        }
     }
 }
 
@@ -23,7 +27,12 @@ impl std::fmt::Display for RecipeError {
         let name = self
             .file
             .as_deref()
-            .map(|p| Path::new(p).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| p.to_string()))
+            .map(|p| {
+                Path::new(p)
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| p.to_string())
+            })
             .unwrap_or_else(|| "<recipe>".into());
         match self.line {
             Some(l) => write!(f, "{name}:{l}: {}", self.msg),
@@ -52,7 +61,9 @@ pub struct Tok {
     pub line: usize,
 }
 
-const OPS: [&str; 13] = ["<=", ">=", "==", "!=", "<", ">", "=", "(", ")", "{", "}", ",", ""];
+const OPS: [&str; 13] = [
+    "<=", ">=", "==", "!=", "<", ">", "=", "(", ")", "{", "}", ",", "",
+];
 
 pub fn lex(src: &str, file: &Option<Arc<str>>) -> PResult<Vec<Tok>> {
     let b: Vec<char> = src.chars().collect();
@@ -75,7 +86,11 @@ pub fn lex(src: &str, file: &Option<Arc<str>>) -> PResult<Vec<Tok>> {
             i += 1;
             loop {
                 if i >= b.len() || b[i] == '\n' {
-                    return Err(RecipeError::new("unterminated string (missing closing \")", Some(line), file.clone()));
+                    return Err(RecipeError::new(
+                        "unterminated string (missing closing \")",
+                        Some(line),
+                        file.clone(),
+                    ));
                 }
                 match b[i] {
                     '"' => {
@@ -96,7 +111,10 @@ pub fn lex(src: &str, file: &Option<Arc<str>>) -> PResult<Vec<Tok>> {
                     }
                 }
             }
-            toks.push(Tok { kind: TokKind::Str(s), line });
+            toks.push(Tok {
+                kind: TokKind::Str(s),
+                line,
+            });
         } else if c.is_ascii_digit() || (c == '-' && i + 1 < b.len() && b[i + 1].is_ascii_digit()) {
             let start = i;
             i += 1;
@@ -112,27 +130,46 @@ pub fn lex(src: &str, file: &Option<Arc<str>>) -> PResult<Vec<Tok>> {
                 }
             }
             let s: String = b[start..i].iter().collect();
-            toks.push(Tok { kind: TokKind::Num(s.parse().unwrap(), int), line });
+            toks.push(Tok {
+                kind: TokKind::Num(s.parse().unwrap(), int),
+                line,
+            });
         } else if c.is_ascii_alphabetic() || c == '_' {
             let start = i;
             while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == '_' || b[i] == '\'') {
                 i += 1;
             }
-            toks.push(Tok { kind: TokKind::Name(b[start..i].iter().collect()), line });
+            toks.push(Tok {
+                kind: TokKind::Name(b[start..i].iter().collect()),
+                line,
+            });
         } else {
             let two: String = b[i..(i + 2).min(b.len())].iter().collect();
             if let Some(op) = OPS.iter().find(|o| o.len() == 2 && **o == two) {
-                toks.push(Tok { kind: TokKind::Op(op), line });
+                toks.push(Tok {
+                    kind: TokKind::Op(op),
+                    line,
+                });
                 i += 2;
             } else if let Some(op) = OPS.iter().find(|o| o.len() == 1 && o.starts_with(c)) {
-                toks.push(Tok { kind: TokKind::Op(op), line });
+                toks.push(Tok {
+                    kind: TokKind::Op(op),
+                    line,
+                });
                 i += 1;
             } else {
-                return Err(RecipeError::new(format!("unexpected character '{c}'"), Some(line), file.clone()));
+                return Err(RecipeError::new(
+                    format!("unexpected character '{c}'"),
+                    Some(line),
+                    file.clone(),
+                ));
             }
         }
     }
-    toks.push(Tok { kind: TokKind::Eof, line });
+    toks.push(Tok {
+        kind: TokKind::Eof,
+        line,
+    });
     Ok(toks)
 }
 
@@ -217,8 +254,17 @@ impl Metric {
         })
     }
     const NAMES: [&'static str; 11] = [
-        "prefix_count", "suffix_count", "mod_count", "open_prefix", "open_suffix", "open_prefixes", "open_suffixes",
-        "influenced_count", "elevated_count", "crafted_count", "links",
+        "prefix_count",
+        "suffix_count",
+        "mod_count",
+        "open_prefix",
+        "open_suffix",
+        "open_prefixes",
+        "open_suffixes",
+        "influenced_count",
+        "elevated_count",
+        "crafted_count",
+        "links",
     ];
 }
 
@@ -237,7 +283,12 @@ pub enum Cond {
     Not(Box<Cond>),
     Const(bool),
     /// has <mod> [tier <op> N | elevated]
-    Has { r: Arg, tier: Option<(CmpOp, i64)>, elevated: bool, line: usize },
+    Has {
+        r: Arg,
+        tier: Option<(CmpOp, i64)>,
+        elevated: bool,
+        line: usize,
+    },
     Is(String),
     Influenced(String),
     Cmp(CmpOp, Val, Val),
@@ -278,7 +329,10 @@ pub enum Op {
     Essence(Arg),
     /// craft <builtin> | craft "a", "b" (fallbacks)
     Craft(Vec<Arg>),
-    Beastcraft { what: String, influence: Option<String> },
+    Beastcraft {
+        what: String,
+        influence: Option<String>,
+    },
     HarvestReforge(String),
     /// Harvest "add a new <tag> modifier and remove another random modifier" (non-influenced)
     HarvestAdd(String),
@@ -391,13 +445,62 @@ const SIMPLE: &[(&str, &str)] = &[
     ("veiled_exalt", "veiled_exalt"),
     ("remove_crafted", "remove_crafted"),
 ];
-const CONQ: &[(&str, &str)] = &[("hunter_exalt", "hunter"), ("warlord_exalt", "warlord"), ("redeemer_exalt", "redeemer"), ("crusader_exalt", "crusader")];
+const CONQ: &[(&str, &str)] = &[
+    ("hunter_exalt", "hunter"),
+    ("warlord_exalt", "warlord"),
+    ("redeemer_exalt", "redeemer"),
+    ("crusader_exalt", "crusader"),
+];
 const KEYWORDS: &[&str] = &[
-    "sell", "rule", "track", "if", "else", "repeat", "until", "while", "foresee", "accept", "otherwise", "def", "include", "goal", "and", "or", "not", "has", "with", "for", "limit",
+    "sell",
+    "rule",
+    "track",
+    "if",
+    "else",
+    "repeat",
+    "until",
+    "while",
+    "foresee",
+    "accept",
+    "otherwise",
+    "def",
+    "include",
+    "goal",
+    "and",
+    "or",
+    "not",
+    "has",
+    "with",
+    "for",
+    "limit",
 ];
 const STATEMENTS: &[&str] = &[
-    "buy", "set_aside", "take", "awaken", "essence", "craft", "beastcraft", "harvest", "omen", "pay", "fail", "succeed", "show", "unveil", "rule", "track", "sell", "repeat", "until", "while", "if",
-    "foresee", "goal", "def", "include", "foulborn_exalt",
+    "buy",
+    "set_aside",
+    "take",
+    "awaken",
+    "essence",
+    "craft",
+    "beastcraft",
+    "harvest",
+    "omen",
+    "pay",
+    "fail",
+    "succeed",
+    "show",
+    "unveil",
+    "rule",
+    "track",
+    "sell",
+    "repeat",
+    "until",
+    "while",
+    "if",
+    "foresee",
+    "goal",
+    "def",
+    "include",
+    "foulborn_exalt",
 ];
 
 struct Parser<'d> {
@@ -451,7 +554,10 @@ impl<'d> Parser<'d> {
         if self.accept_op(op) {
             Ok(())
         } else {
-            Err(self.err(format!("expected {what}, got {}", Self::describe(self.peek()))))
+            Err(self.err(format!(
+                "expected {what}, got {}",
+                Self::describe(self.peek())
+            )))
         }
     }
     fn expect_name(&mut self, what: &str) -> PResult<String> {
@@ -460,14 +566,20 @@ impl<'d> Parser<'d> {
             self.i += 1;
             Ok(n)
         } else {
-            Err(self.err(format!("expected {what}, got {}", Self::describe(self.peek()))))
+            Err(self.err(format!(
+                "expected {what}, got {}",
+                Self::describe(self.peek())
+            )))
         }
     }
     fn expect_kw(&mut self, kw: &str, what: &str) -> PResult<()> {
         if self.accept_name(kw) {
             Ok(())
         } else {
-            Err(self.err(format!("expected {what}, got {}", Self::describe(self.peek()))))
+            Err(self.err(format!(
+                "expected {what}, got {}",
+                Self::describe(self.peek())
+            )))
         }
     }
     fn expect_str(&mut self, what: &str) -> PResult<String> {
@@ -476,7 +588,10 @@ impl<'d> Parser<'d> {
             self.i += 1;
             Ok(s)
         } else {
-            Err(self.err(format!("expected {what}, got {}", Self::describe(self.peek()))))
+            Err(self.err(format!(
+                "expected {what}, got {}",
+                Self::describe(self.peek())
+            )))
         }
     }
     fn expect_num(&mut self, what: &str) -> PResult<f64> {
@@ -485,7 +600,10 @@ impl<'d> Parser<'d> {
             self.i += 1;
             Ok(n)
         } else {
-            Err(self.err(format!("expected {what}, got {}", Self::describe(self.peek()))))
+            Err(self.err(format!(
+                "expected {what}, got {}",
+                Self::describe(self.peek())
+            )))
         }
     }
     fn accept_str(&mut self) -> Option<String> {
@@ -520,7 +638,11 @@ impl<'d> Parser<'d> {
                 body.push(st);
             }
         }
-        Ok(Seq { line: 1, file: self.file.clone(), body })
+        Ok(Seq {
+            line: 1,
+            file: self.file.clone(),
+            body,
+        })
     }
 
     fn block(&mut self) -> PResult<Seq> {
@@ -535,11 +657,19 @@ impl<'d> Parser<'d> {
                 body.push(st);
             }
         }
-        Ok(Seq { line: start, file: self.file.clone(), body })
+        Ok(Seq {
+            line: start,
+            file: self.file.clone(),
+            body,
+        })
     }
 
     fn act(&self, line: usize, op: Op) -> Option<Node> {
-        Some(Node::Act(Act { line, file: self.file.clone(), op }))
+        Some(Node::Act(Act {
+            line,
+            file: self.file.clone(),
+            op,
+        }))
     }
 
     fn statement(&mut self, top: bool) -> PResult<Option<Node>> {
@@ -571,29 +701,62 @@ impl<'d> Parser<'d> {
                 if self.defs.contains_key(&name) {
                     return Err(self.err_at(format!("sub-recipe '{name}' defined twice"), line));
                 }
-                self.defs.insert(name.clone(), Def { name, params, body, line, file: self.file.clone() });
+                self.defs.insert(
+                    name.clone(),
+                    Def {
+                        name,
+                        params,
+                        body,
+                        line,
+                        file: self.file.clone(),
+                    },
+                );
                 return Ok(None);
             }
             "include" => {
                 self.i += 1;
                 let path = self.expect_str("file name")?;
-                let base = self.file.as_deref().and_then(|f| Path::new(f).parent().map(|p| p.to_path_buf())).unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                let base = self
+                    .file
+                    .as_deref()
+                    .and_then(|f| Path::new(f).parent().map(|p| p.to_path_buf()))
+                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
                 let full = normalize(&base.join(&path));
                 if !full.exists() {
-                    return Err(self.err_at(format!("include file not found: {path} (looked for {})", full.display()), line));
+                    return Err(self.err_at(
+                        format!(
+                            "include file not found: {path} (looked for {})",
+                            full.display()
+                        ),
+                        line,
+                    ));
                 }
                 if self.include_stack.contains(&full) {
                     return Ok(None);
                 }
-                let src = std::fs::read_to_string(&full).map_err(|e| self.err_at(format!("cannot read {}: {e}", full.display()), line))?;
+                let src = std::fs::read_to_string(&full).map_err(|e| {
+                    self.err_at(format!("cannot read {}: {e}", full.display()), line)
+                })?;
                 let mut stack = self.include_stack.clone();
                 stack.push(full.clone());
                 let file: Option<Arc<str>> = Some(Arc::from(full.to_string_lossy().as_ref()));
                 let toks = lex(&src, &file)?;
-                let mut sub = Parser { file, toks, i: 0, defs: self.defs, goal: None, tracks: vec![], sales: vec![], rules: BTreeMap::new(), include_stack: stack };
+                let mut sub = Parser {
+                    file,
+                    toks,
+                    i: 0,
+                    defs: self.defs,
+                    goal: None,
+                    tracks: vec![],
+                    sales: vec![],
+                    rules: BTreeMap::new(),
+                    include_stack: stack,
+                };
                 let body = sub.parse_program()?;
                 if !body.body.is_empty() {
-                    return Err(self.err_at("included files may only contain 'def' sub-recipes", line));
+                    return Err(
+                        self.err_at("included files may only contain 'def' sub-recipes", line)
+                    );
                 }
                 return Ok(None);
             }
@@ -616,7 +779,11 @@ impl<'d> Parser<'d> {
                 self.i += 1;
                 let n = self.expect_num("an amount")?;
                 let unit = self.expect_name("a currency (chaos, divine)")?;
-                let cond = if self.accept_name("if") { self.condition()? } else { Cond::Const(true) };
+                let cond = if self.accept_name("if") {
+                    self.condition()?
+                } else {
+                    Cond::Const(true)
+                };
                 self.sales.push((vec![(unit, n)], cond));
                 return Ok(None);
             }
@@ -632,7 +799,9 @@ impl<'d> Parser<'d> {
         self.i += 1;
         if w == "foulborn_exalt" {
             let side = match &self.peek().kind {
-                TokKind::Name(n) if n == "prefix" || n == "suffix" => Some(self.expect_name("side")?),
+                TokKind::Name(n) if n == "prefix" || n == "suffix" => {
+                    Some(self.expect_name("side")?)
+                }
                 _ => None,
             };
             return Ok(self.act(line, Op::FoulbornExalt(side)));
@@ -685,7 +854,11 @@ impl<'d> Parser<'d> {
             }
             "beastcraft" => {
                 let what = self.expect_name("a beastcraft name")?;
-                let influence = if what == "add_mod" { Some(self.expect_name("an influence (hunter, warlord, redeemer)")?) } else { None };
+                let influence = if what == "add_mod" {
+                    Some(self.expect_name("an influence (hunter, warlord, redeemer)")?)
+                } else {
+                    None
+                };
                 return Ok(self.act(line, Op::Beastcraft { what, influence }));
             }
             "harvest" => {
@@ -726,25 +899,56 @@ impl<'d> Parser<'d> {
                     return Err(self.err("'repeat { ... }' must be followed by 'until <condition>' or 'while <condition>'"));
                 };
                 let cond = self.condition()?;
-                return Ok(Some(Node::Loop(Loop { line, file: self.file.clone(), body, cond, check_first: false, negate, limit })));
+                return Ok(Some(Node::Loop(Loop {
+                    line,
+                    file: self.file.clone(),
+                    body,
+                    cond,
+                    check_first: false,
+                    negate,
+                    limit,
+                })));
             }
             "until" | "while" => {
                 let cond = self.condition()?;
                 let limit = self.opt_limit()?;
                 let body = self.block()?;
-                return Ok(Some(Node::Loop(Loop { line, file: self.file.clone(), body, cond, check_first: true, negate: w == "while", limit })));
+                return Ok(Some(Node::Loop(Loop {
+                    line,
+                    file: self.file.clone(),
+                    body,
+                    cond,
+                    check_first: true,
+                    negate: w == "while",
+                    limit,
+                })));
             }
             "if" => return Ok(Some(self.if_rest(line)?)),
             "foresee" => {
                 let act = match self.statement(false)? {
                     Some(Node::Act(a)) => a,
-                    _ => return Err(self.err_at("'foresee' must be followed by a single currency action", line)),
+                    _ => {
+                        return Err(self.err_at(
+                            "'foresee' must be followed by a single currency action",
+                            line,
+                        ))
+                    }
                 };
                 self.expect_kw("accept", "'accept if <condition>'")?;
                 self.expect_kw("if", "'if'")?;
                 let cond = self.condition()?;
-                let other = if self.accept_name("otherwise") { Some(self.block()?) } else { None };
-                return Ok(Some(Node::Foresee(Foresee { line, file: self.file.clone(), action: act, cond, other })));
+                let other = if self.accept_name("otherwise") {
+                    Some(self.block()?)
+                } else {
+                    None
+                };
+                return Ok(Some(Node::Foresee(Foresee {
+                    line,
+                    file: self.file.clone(),
+                    action: act,
+                    cond,
+                    other,
+                })));
             }
             _ => {}
         }
@@ -759,12 +963,24 @@ impl<'d> Parser<'d> {
                     self.expect_op(",", "',' or ')'")?;
                 }
             }
-            return Ok(Some(Node::Call(Call { line, file: self.file.clone(), name: w, args })));
+            return Ok(Some(Node::Call(Call {
+                line,
+                file: self.file.clone(),
+                name: w,
+                args,
+            })));
         }
-        let mut known: Vec<&str> = SIMPLE.iter().map(|s| s.0).chain(CONQ.iter().map(|s| s.0)).collect();
+        let mut known: Vec<&str> = SIMPLE
+            .iter()
+            .map(|s| s.0)
+            .chain(CONQ.iter().map(|s| s.0))
+            .collect();
         known.extend_from_slice(STATEMENTS);
         let hint = suggest(&w, &known);
-        Err(self.err_at(format!("unknown statement '{w}'.{hint} (Sub-recipe calls need parentheses: {w}(...))"), line))
+        Err(self.err_at(
+            format!("unknown statement '{w}'.{hint} (Sub-recipe calls need parentheses: {w}(...))"),
+            line,
+        ))
     }
 
     fn opt_limit(&mut self) -> PResult<Option<u64>> {
@@ -781,18 +997,36 @@ impl<'d> Parser<'d> {
         let other = if self.accept_name("else") {
             if self.accept_name("if") {
                 let l = self.toks[self.i - 1].line;
-                Some(Seq { line, file: self.file.clone(), body: vec![self.if_rest(l)?] })
+                Some(Seq {
+                    line,
+                    file: self.file.clone(),
+                    body: vec![self.if_rest(l)?],
+                })
             } else {
                 Some(self.block()?)
             }
         } else {
             None
         };
-        Ok(Node::If(If { line, file: self.file.clone(), cond, then, other }))
+        Ok(Node::If(If {
+            line,
+            file: self.file.clone(),
+            cond,
+            then,
+            other,
+        }))
     }
 
     fn buy(&mut self, line: usize) -> PResult<BuyArgs> {
-        let mut a = BuyArgs { base: String::new(), rarity: "normal".into(), influences: vec![], ilvl: 100, with: vec![], cost: vec![], tag: None };
+        let mut a = BuyArgs {
+            base: String::new(),
+            rarity: "normal".into(),
+            influences: vec![],
+            ilvl: 100,
+            with: vec![],
+            cost: vec![],
+            tag: None,
+        };
         let mut have_base = false;
         loop {
             let t = self.peek().clone();
@@ -827,7 +1061,13 @@ impl<'d> Parser<'d> {
                     } else if self.accept_name("elevated") {
                         elevated = true;
                     }
-                    a.with.push(WithMod { r, tier, elevated, fractured, line: t.line });
+                    a.with.push(WithMod {
+                        r,
+                        tier,
+                        elevated,
+                        fractured,
+                        line: t.line,
+                    });
                 }
                 TokKind::Name(n) if n == "for" => {
                     self.i += 1;
@@ -848,7 +1088,10 @@ impl<'d> Parser<'d> {
             }
         }
         if !have_base {
-            return Err(self.err_at("buy needs a base name, e.g. buy \"Astral Plate\" ilvl 86", line));
+            return Err(self.err_at(
+                "buy needs a base name, e.g. buy \"Astral Plate\" ilvl 86",
+                line,
+            ));
         }
         Ok(a)
     }
@@ -896,7 +1139,12 @@ impl<'d> Parser<'d> {
             } else if self.accept_name("elevated") {
                 elevated = true;
             }
-            return Ok(Cond::Has { r, tier, elevated, line: t.line });
+            return Ok(Cond::Has {
+                r,
+                tier,
+                elevated,
+                line: t.line,
+            });
         }
         if self.accept_name("is") {
             let r = self.expect_name("normal, magic or rare")?;
@@ -985,20 +1233,34 @@ pub fn suggest(word: &str, options: &[&str]) -> String {
         for i in 1..=a.len() {
             let mut cur = vec![i; b.len() + 1];
             for j in 1..=b.len() {
-                cur[j] = (prev[j] + 1).min(cur[j - 1] + 1).min(prev[j - 1] + usize::from(a[i - 1] != b[j - 1]));
+                cur[j] = (prev[j] + 1)
+                    .min(cur[j - 1] + 1)
+                    .min(prev[j - 1] + usize::from(a[i - 1] != b[j - 1]));
             }
             prev = cur;
         }
         let d = prev[b.len()] as f64;
         1.0 - d / (a.len().max(b.len()).max(1) as f64)
     }
-    let mut scored: Vec<(f64, &str)> = options.iter().map(|o| (ratio(word, o), *o)).filter(|(r, _)| *r >= 0.6).collect();
+    let mut scored: Vec<(f64, &str)> = options
+        .iter()
+        .map(|o| (ratio(word, o), *o))
+        .filter(|(r, _)| *r >= 0.6)
+        .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
     scored.dedup_by(|a, b| a.1 == b.1);
     if scored.is_empty() {
         String::new()
     } else {
-        format!(" Did you mean: {}?", scored.iter().take(3).map(|x| x.1).collect::<Vec<_>>().join(", "))
+        format!(
+            " Did you mean: {}?",
+            scored
+                .iter()
+                .take(3)
+                .map(|x| x.1)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
@@ -1008,10 +1270,13 @@ type Env = BTreeMap<String, String>;
 fn sub_arg(a: &Arg, env: &Env, file: &Option<Arc<str>>) -> PResult<Arg> {
     match a {
         Arg::Lit(_) => Ok(a.clone()),
-        Arg::Param(p, line) => env
-            .get(p)
-            .map(|v| Arg::Lit(v.clone()))
-            .ok_or_else(|| RecipeError::new(format!("'{p}' is not a string or a parameter of this sub-recipe"), Some(*line), file.clone())),
+        Arg::Param(p, line) => env.get(p).map(|v| Arg::Lit(v.clone())).ok_or_else(|| {
+            RecipeError::new(
+                format!("'{p}' is not a string or a parameter of this sub-recipe"),
+                Some(*line),
+                file.clone(),
+            )
+        }),
     }
 }
 
@@ -1024,17 +1289,37 @@ fn sub_val(v: &Val, env: &Env, f: &Option<Arc<str>>) -> PResult<Val> {
 
 fn sub_cond(c: &Cond, env: &Env, f: &Option<Arc<str>>) -> PResult<Cond> {
     Ok(match c {
-        Cond::And(a, b) => Cond::And(Box::new(sub_cond(a, env, f)?), Box::new(sub_cond(b, env, f)?)),
-        Cond::Or(a, b) => Cond::Or(Box::new(sub_cond(a, env, f)?), Box::new(sub_cond(b, env, f)?)),
+        Cond::And(a, b) => Cond::And(
+            Box::new(sub_cond(a, env, f)?),
+            Box::new(sub_cond(b, env, f)?),
+        ),
+        Cond::Or(a, b) => Cond::Or(
+            Box::new(sub_cond(a, env, f)?),
+            Box::new(sub_cond(b, env, f)?),
+        ),
         Cond::Not(a) => Cond::Not(Box::new(sub_cond(a, env, f)?)),
-        Cond::Has { r, tier, elevated, line } => Cond::Has { r: sub_arg(r, env, f)?, tier: *tier, elevated: *elevated, line: *line },
+        Cond::Has {
+            r,
+            tier,
+            elevated,
+            line,
+        } => Cond::Has {
+            r: sub_arg(r, env, f)?,
+            tier: *tier,
+            elevated: *elevated,
+            line: *line,
+        },
         Cond::Cmp(op, a, b) => Cond::Cmp(*op, sub_val(a, env, f)?, sub_val(b, env, f)?),
         o => o.clone(),
     })
 }
 
 fn sub_op(op: &Op, env: &Env, f: &Option<Arc<str>>) -> PResult<Op> {
-    let subs = |v: &Vec<Arg>| v.iter().map(|a| sub_arg(a, env, f)).collect::<PResult<Vec<_>>>();
+    let subs = |v: &Vec<Arg>| {
+        v.iter()
+            .map(|a| sub_arg(a, env, f))
+            .collect::<PResult<Vec<_>>>()
+    };
     Ok(match op {
         Op::Unveil(v) => Op::Unveil(subs(v)?),
         Op::Craft(v) => Op::Craft(subs(v)?),
@@ -1058,21 +1343,39 @@ fn expand_seq(s: &Seq, defs: &BTreeMap<String, Def>, env: &Env, depth: usize) ->
             other => out.push(expand_node(other, defs, env, depth)?),
         }
     }
-    Ok(Seq { line: s.line, file: s.file.clone(), body: out })
+    Ok(Seq {
+        line: s.line,
+        file: s.file.clone(),
+        body: out,
+    })
 }
 
 fn expand_call(c: &Call, defs: &BTreeMap<String, Def>, env: &Env, depth: usize) -> PResult<Seq> {
     if depth > 50 {
-        return Err(RecipeError::new("sub-recipe calls nested too deeply (recursion?)", Some(c.line), c.file.clone()));
+        return Err(RecipeError::new(
+            "sub-recipe calls nested too deeply (recursion?)",
+            Some(c.line),
+            c.file.clone(),
+        ));
     }
     let Some(d) = defs.get(&c.name) else {
         let names: Vec<&str> = defs.keys().map(|s| s.as_str()).collect();
         let hint = suggest(&c.name, &names);
-        return Err(RecipeError::new(format!("unknown sub-recipe '{}'.{hint}", c.name), Some(c.line), c.file.clone()));
+        return Err(RecipeError::new(
+            format!("unknown sub-recipe '{}'.{hint}", c.name),
+            Some(c.line),
+            c.file.clone(),
+        ));
     };
     if c.args.len() != d.params.len() {
         return Err(RecipeError::new(
-            format!("sub-recipe '{}' takes {} argument(s) ({}), got {}", d.name, d.params.len(), d.params.join(", "), c.args.len()),
+            format!(
+                "sub-recipe '{}' takes {} argument(s) ({}), got {}",
+                d.name,
+                d.params.len(),
+                d.params.join(", "),
+                c.args.len()
+            ),
             Some(c.line),
             c.file.clone(),
         ));
@@ -1086,19 +1389,38 @@ fn expand_call(c: &Call, defs: &BTreeMap<String, Def>, env: &Env, depth: usize) 
 
 fn expand_node(n: &Node, defs: &BTreeMap<String, Def>, env: &Env, depth: usize) -> PResult<Node> {
     Ok(match n {
-        Node::Act(a) => Node::Act(Act { line: a.line, file: a.file.clone(), op: sub_op(&a.op, env, &a.file)? }),
+        Node::Act(a) => Node::Act(Act {
+            line: a.line,
+            file: a.file.clone(),
+            op: sub_op(&a.op, env, &a.file)?,
+        }),
         Node::Seq(s) => Node::Seq(expand_seq(s, defs, env, depth)?),
-        Node::Loop(l) => Node::Loop(Loop { body: expand_seq(&l.body, defs, env, depth)?, cond: sub_cond(&l.cond, env, &l.file)?, ..l.clone() }),
+        Node::Loop(l) => Node::Loop(Loop {
+            body: expand_seq(&l.body, defs, env, depth)?,
+            cond: sub_cond(&l.cond, env, &l.file)?,
+            ..l.clone()
+        }),
         Node::If(i) => Node::If(If {
             cond: sub_cond(&i.cond, env, &i.file)?,
             then: expand_seq(&i.then, defs, env, depth)?,
-            other: i.other.as_ref().map(|o| expand_seq(o, defs, env, depth)).transpose()?,
+            other: i
+                .other
+                .as_ref()
+                .map(|o| expand_seq(o, defs, env, depth))
+                .transpose()?,
             ..i.clone()
         }),
         Node::Foresee(f) => Node::Foresee(Foresee {
-            action: Act { op: sub_op(&f.action.op, env, &f.file)?, ..f.action.clone() },
+            action: Act {
+                op: sub_op(&f.action.op, env, &f.file)?,
+                ..f.action.clone()
+            },
             cond: sub_cond(&f.cond, env, &f.file)?,
-            other: f.other.as_ref().map(|o| expand_seq(o, defs, env, depth)).transpose()?,
+            other: f
+                .other
+                .as_ref()
+                .map(|o| expand_seq(o, defs, env, depth))
+                .transpose()?,
             ..f.clone()
         }),
         Node::Call(c) => Node::Seq(expand_call(c, defs, env, depth)?),
@@ -1106,23 +1428,62 @@ fn expand_node(n: &Node, defs: &BTreeMap<String, Def>, env: &Env, depth: usize) 
 }
 
 pub fn parse(src: &str, file: Option<&Path>) -> PResult<Program> {
-    let abs = file.map(|f| std::fs::canonicalize(f).map(|p| PathBuf::from(p.to_string_lossy().trim_start_matches(r"\\?\"))).unwrap_or_else(|_| f.to_path_buf()));
-    let farc: Option<Arc<str>> = abs.as_ref().map(|p| Arc::from(p.to_string_lossy().as_ref()));
+    let abs = file.map(|f| {
+        std::fs::canonicalize(f)
+            .map(|p| PathBuf::from(p.to_string_lossy().trim_start_matches(r"\\?\")))
+            .unwrap_or_else(|_| f.to_path_buf())
+    });
+    let farc: Option<Arc<str>> = abs
+        .as_ref()
+        .map(|p| Arc::from(p.to_string_lossy().as_ref()));
     let toks = lex(src, &farc)?;
     let mut defs = BTreeMap::new();
-    let mut p = Parser { file: farc.clone(), toks, i: 0, defs: &mut defs, goal: None, tracks: vec![], sales: vec![], rules: BTreeMap::new(), include_stack: abs.iter().cloned().collect() };
+    let mut p = Parser {
+        file: farc.clone(),
+        toks,
+        i: 0,
+        defs: &mut defs,
+        goal: None,
+        tracks: vec![],
+        sales: vec![],
+        rules: BTreeMap::new(),
+        include_stack: abs.iter().cloned().collect(),
+    };
     let body = p.parse_program()?;
-    let (goal, tracks, sales, rules) = (p.goal.take(), std::mem::take(&mut p.tracks), std::mem::take(&mut p.sales), std::mem::take(&mut p.rules));
+    let (goal, tracks, sales, rules) = (
+        p.goal.take(),
+        std::mem::take(&mut p.tracks),
+        std::mem::take(&mut p.sales),
+        std::mem::take(&mut p.rules),
+    );
     let env = Env::new();
     let body = expand_seq(&body, &defs, &env, 0)?;
     let goal = goal.map(|g| sub_cond(&g, &env, &farc)).transpose()?;
-    let tracks = tracks.into_iter().map(|(l, c)| Ok((l, sub_cond(&c, &env, &farc)?))).collect::<PResult<Vec<_>>>()?;
-    let sales = sales.into_iter().map(|(a, c)| Ok((a, sub_cond(&c, &env, &farc)?))).collect::<PResult<Vec<_>>>()?;
-    let name = file.and_then(|f| f.file_stem()).map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "recipe".into());
-    Ok(Program { name, body, goal, tracks, sales, rules })
+    let tracks = tracks
+        .into_iter()
+        .map(|(l, c)| Ok((l, sub_cond(&c, &env, &farc)?)))
+        .collect::<PResult<Vec<_>>>()?;
+    let sales = sales
+        .into_iter()
+        .map(|(a, c)| Ok((a, sub_cond(&c, &env, &farc)?)))
+        .collect::<PResult<Vec<_>>>()?;
+    let name = file
+        .and_then(|f| f.file_stem())
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "recipe".into());
+    Ok(Program {
+        name,
+        body,
+        goal,
+        tracks,
+        sales,
+        rules,
+    })
 }
 
 pub fn parse_file(path: &Path) -> PResult<Program> {
-    let src = std::fs::read_to_string(path).map_err(|e| RecipeError::new(format!("cannot read {}: {e}", path.display()), None, None))?;
+    let src = std::fs::read_to_string(path).map_err(|e| {
+        RecipeError::new(format!("cannot read {}: {e}", path.display()), None, None)
+    })?;
     parse(&src, Some(path))
 }

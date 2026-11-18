@@ -15,7 +15,9 @@ usage: poecraft [--prices FILE]... <command> [options]
 commands:
   run RECIPE [--runs N] [--mode auto|exact|mc|both] [--seed S] [--json] [--show-item]
   compare RECIPE... [--runs N] [--mode M] [--sort cost_per_success|mean|risk|std] [--json] [-v]
-  sample RECIPE [--seed S]                run once; print the item, cost and `show` output
+  sample RECIPE [--seed S] [--pob [--roll 0-1] [--quality Q]]
+                                          run once; print the item, cost, `show` output, PoB text
+  parse-item FILE|- [--json]              read PoB or in-game item text into a crafting item
   check RECIPE [--runs N]                 parse and run a few times to catch errors
   mods BASE [--influence a,b] [--ilvl N] [--side prefix|suffix] [--search TEXT] [--tag TAG]
   prices [--grep TEXT]                    show the price table in use
@@ -36,7 +38,7 @@ impl Args {
     }
     /// Positional arguments after the command (skipping flags and their values).
     fn positional(&self) -> Vec<String> {
-        const WITH_VALUE: [&str; 13] = ["--runs", "--mode", "--seed", "--sort", "--prices", "--influence", "--ilvl", "--side", "--search", "--tag", "--grep", "--class", "--exact-seconds"];
+        const WITH_VALUE: [&str; 15] = ["--runs", "--mode", "--seed", "--sort", "--prices", "--influence", "--ilvl", "--side", "--search", "--tag", "--grep", "--class", "--exact-seconds", "--roll", "--quality"];
         let mut out = vec![];
         let mut i = 1;
         while i < self.v.len() {
@@ -239,6 +241,16 @@ fn real_main() -> Result<()> {
                 println!("== result: {}", if r.success { "SUCCESS".to_string() } else { format!("FAILED {}", r.msg) });
                 if let Some(it) = &r.item {
                     println!("{}", it.describe(gd));
+                    if args.flag("--pob") {
+                        let o = poecraft_core::itemtext::ExportOpts {
+                            roll: args.val("--roll").map(|s| s.parse()).transpose()?.unwrap_or(1.0),
+                            quality: args.val("--quality").map(|s| s.parse()).transpose()?.unwrap_or(20),
+                            ..Default::default()
+                        };
+                        println!("
+-- PoB item text (paste into PoB: Items > Create custom):
+{}", poecraft_core::itemtext::to_pob_text(gd, it, &o));
+                    }
                 }
                 let total: f64 = r.costs.iter().map(|(k, v)| prices.get(k) * v).sum();
                 println!("cost: {} chaos {:?}", poecraft_core::analysis::fmt0(total), r.costs);
@@ -307,6 +319,42 @@ fn real_main() -> Result<()> {
             for (k, v) in &prices.table {
                 if g.as_deref().is_none_or(|g| k.to_lowercase().contains(g)) {
                     println!("  {k:45} {v}");
+                }
+            }
+        }
+        "parse-item" => {
+            // PoB or in-game item text from a file, or stdin with "-"
+            let pos = args.positional();
+            let src = pos.first().map(|s| s.as_str()).unwrap_or("-");
+            let text = if src == "-" {
+                let mut t = String::new();
+                std::io::Read::read_to_string(&mut std::io::stdin(), &mut t)?;
+                t
+            } else {
+                std::fs::read_to_string(src)?
+            };
+            let p = poecraft_core::itemtext::parse_text(gd, &text).map_err(|e| anyhow!(e))?;
+            if args.flag("--json") {
+                let mods: Vec<serde_json::Value> = p
+                    .item
+                    .mods
+                    .iter()
+                    .map(|r| {
+                        let m = gd.m(r.m);
+                        serde_json::json!({"id": m.id, "side": m.gen.name(), "tier": gd.tier(r.m, p.item.base), "influence": m.influence.map(|i| i.name()), "crafted": r.crafted, "fractured": r.fractured, "text": m.short()})
+                    })
+                    .collect();
+                println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                    "base": gd.base(p.item.base).name, "item_level": p.item.ilvl, "rarity": p.item.rarity.name(),
+                    "influences": p.item.influences.iter().map(|i| i.name()).collect::<Vec<_>>(), "quality": p.quality,
+                    "mods": mods, "implicits": p.implicit_lines, "unmatched": p.unmatched, "ambiguous": p.ambiguous}))?);
+            } else {
+                println!("{}", p.item.describe(gd));
+                for u in &p.unmatched {
+                    println!("  UNMATCHED: {u}");
+                }
+                for a in &p.ambiguous {
+                    println!("  AMBIGUOUS: {a}");
                 }
             }
         }

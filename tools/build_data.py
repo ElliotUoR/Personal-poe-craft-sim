@@ -138,6 +138,10 @@ def main(argv=None):
     for mid, m in mods.items():
         if m["domain"] not in DOMAINS or m["generation_type"] not in ("prefix", "suffix"):
             continue
+        # PoE Royale leftovers still carry spawn weights in the export but cannot roll in the
+        # real game (absent from PoEDB mod lists, checked on Boots_dex 2026-11-18).
+        if "royale" in mid.lower():
+            continue
         tags_here = {s["tag"] for s in m["spawn_weights"]}
         spawnable = any(s["weight"] > 0 and s["tag"] in relevant_tags for s in m["spawn_weights"])
         elevated = "Elevated" in m["name"] and (tags_here & {t for c in out_classes.values() for t in c["influence_tags"]})

@@ -10,7 +10,11 @@ pub struct Mat {
 
 impl Mat {
     pub fn zeros(rows: usize, cols: usize) -> Mat {
-        Mat { rows, cols, a: vec![0.0; rows * cols] }
+        Mat {
+            rows,
+            cols,
+            a: vec![0.0; rows * cols],
+        }
     }
     pub fn identity(n: usize) -> Mat {
         let mut m = Mat::zeros(n, n);
@@ -166,7 +170,10 @@ mod tests {
         let z = lu.solve_transpose(&[1.0, 0.0, 0.0]);
         for j in 0..3 {
             let r: f64 = (0..3).map(|i| a.at(i, j) * z[i]).sum();
-            assert!((r - if j == 0 { 1.0 } else { 0.0 }).abs() < 1e-9, "col {j}: {r}");
+            assert!(
+                (r - if j == 0 { 1.0 } else { 0.0 }).abs() < 1e-9,
+                "col {j}: {r}"
+            );
         }
     }
 }

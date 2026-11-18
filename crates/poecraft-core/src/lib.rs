@@ -6,6 +6,7 @@ pub mod engine;
 pub mod enumerate;
 pub mod exact;
 pub mod item;
+pub mod itemtext;
 pub mod lang;
 pub mod linalg;
 pub mod mechanics;

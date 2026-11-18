@@ -46,7 +46,9 @@ pub struct RandomChooser {
 
 impl RandomChooser {
     pub fn new(seed: u64) -> Self {
-        RandomChooser { rng: SmallRng::seed_from_u64(seed) }
+        RandomChooser {
+            rng: SmallRng::seed_from_u64(seed),
+        }
     }
 }
 
@@ -107,7 +109,10 @@ pub fn harvest_tag(tag: &str) -> &str {
 
 pub fn harvest_cost(tag: &str) -> Option<(&'static str, f64)> {
     let t = harvest_tag(tag);
-    HARVEST_REFORGE.iter().find(|x| x.0 == t).map(|x| (x.1, x.2))
+    HARVEST_REFORGE
+        .iter()
+        .find(|x| x.0 == t)
+        .map(|x| (x.1, x.2))
 }
 
 /// "Reforge an Influenced Rare item with random modifiers, including a Influence modifier":
@@ -138,23 +143,81 @@ pub fn harvest_add_cost(tag: &str) -> Option<(&'static str, f64)> {
 /// Beastcrafts: recipe -> (beasts consumed, number of "any rare beast", description).
 /// Source: PoEDB Bestiary_Recipe (fetched 2026-11-18).
 pub const BEASTCRAFTS: &[(&str, &[&str], u32, &str)] = &[
-    ("metamod", &["Wild Bristle Matron"], 3, "Add a crafted Meta-modifier to a non-Unique Item"),
-    ("imprint", &["Craicic Croaker"], 3, "Create an Imprint: Of a Magic Item"),
-    ("hinekoras_lock", &["Craicic Croaker", "Black Mórrigan"], 2, "Apply a Hinekora's Lock: To a Magic Item"),
-    ("max_links", &["Craicic Sand Spitter", "Black Mórrigan"], 2, "Modify an Item: to Have Maximum Possible Links"),
-    ("max_sockets", &["Craicic Shield Crab", "Black Mórrigan"], 2, "Modify an Item: to Have Maximum Possible Number of Sockets"),
-    ("six_link_rare", &["Saqawine Vulture"], 3, "Create an Item: Fully-linked Six-socket Rare"),
-    ("add_prefix_remove_suffix", &["Farric Wolf Alpha"], 3, "Add a Prefix, Remove a Random Suffix (rare only)"),
-    ("add_suffix_remove_prefix", &["Farric Lynx Alpha"], 3, "Add a Suffix, Remove a Random Prefix (rare only)"),
-    ("add_hunter_mod", &["Craicic Watcher", "Craicic Maw"], 2, "Add a Mod to a Hunter Item"),
-    ("add_warlord_mod", &["Fenumal Scrabbler", "Craicic Maw"], 2, "Add a Mod to a Warlord Item"),
-    ("add_redeemer_mod", &["Fenumal Queen", "Craicic Maw"], 2, "Add a Mod to a Redeemer Item"),
+    (
+        "metamod",
+        &["Wild Bristle Matron"],
+        3,
+        "Add a crafted Meta-modifier to a non-Unique Item",
+    ),
+    (
+        "imprint",
+        &["Craicic Croaker"],
+        3,
+        "Create an Imprint: Of a Magic Item",
+    ),
+    (
+        "hinekoras_lock",
+        &["Craicic Croaker", "Black Mórrigan"],
+        2,
+        "Apply a Hinekora's Lock: To a Magic Item",
+    ),
+    (
+        "max_links",
+        &["Craicic Sand Spitter", "Black Mórrigan"],
+        2,
+        "Modify an Item: to Have Maximum Possible Links",
+    ),
+    (
+        "max_sockets",
+        &["Craicic Shield Crab", "Black Mórrigan"],
+        2,
+        "Modify an Item: to Have Maximum Possible Number of Sockets",
+    ),
+    (
+        "six_link_rare",
+        &["Saqawine Vulture"],
+        3,
+        "Create an Item: Fully-linked Six-socket Rare",
+    ),
+    (
+        "add_prefix_remove_suffix",
+        &["Farric Wolf Alpha"],
+        3,
+        "Add a Prefix, Remove a Random Suffix (rare only)",
+    ),
+    (
+        "add_suffix_remove_prefix",
+        &["Farric Lynx Alpha"],
+        3,
+        "Add a Suffix, Remove a Random Prefix (rare only)",
+    ),
+    (
+        "add_hunter_mod",
+        &["Craicic Watcher", "Craicic Maw"],
+        2,
+        "Add a Mod to a Hunter Item",
+    ),
+    (
+        "add_warlord_mod",
+        &["Fenumal Scrabbler", "Craicic Maw"],
+        2,
+        "Add a Mod to a Warlord Item",
+    ),
+    (
+        "add_redeemer_mod",
+        &["Fenumal Queen", "Craicic Maw"],
+        2,
+        "Add a Mod to a Redeemer Item",
+    ),
 ];
 
 pub type Cost = Vec<(String, f64)>;
 
 pub fn beast_cost(name: &str) -> Cost {
-    let (_, beasts, any, _) = BEASTCRAFTS.iter().find(|b| b.0 == name).expect("known beastcraft");
+    let (_, beasts, any, _) = BEASTCRAFTS
+        .iter()
+        .find(|b| b.0 == name)
+        .expect("known beastcraft");
     let mut c: Cost = beasts.iter().map(|b| (format!("beast:{b}"), 1.0)).collect();
     if *any > 0 {
         c.push(("any_rare_beast".into(), *any as f64));
@@ -174,7 +237,12 @@ pub fn foulborn_cull(gd: &GameData, mods: &[ModIdx], weights: &[u32]) -> (Vec<Mo
     groups.sort_by_key(|v| v.iter().copied().min().unwrap_or(0));
     let (mut om, mut ow) = (Vec::new(), Vec::new());
     for mut v in groups {
-        v.sort_by(|a, b| gd.m(mods[*b]).level.cmp(&gd.m(mods[*a]).level).then(a.cmp(b)));
+        v.sort_by(|a, b| {
+            gd.m(mods[*b])
+                .level
+                .cmp(&gd.m(mods[*a]).level)
+                .then(a.cmp(b))
+        });
         let n = v.len();
         let k = keep_tiers(n);
         for &i in v.iter().take(k) {
@@ -207,10 +275,22 @@ pub struct PoolOpts {
 
 impl PoolOpts {
     pub fn both() -> Self {
-        PoolOpts { prefix: true, suffix: true, influence_only: None, tag: None, influenced: false }
+        PoolOpts {
+            prefix: true,
+            suffix: true,
+            influence_only: None,
+            tag: None,
+            influenced: false,
+        }
     }
     pub fn side(g: Gen) -> Self {
-        PoolOpts { prefix: g == Gen::Prefix, suffix: g == Gen::Suffix, influence_only: None, tag: None, influenced: false }
+        PoolOpts {
+            prefix: g == Gen::Prefix,
+            suffix: g == Gen::Suffix,
+            influence_only: None,
+            tag: None,
+            influenced: false,
+        }
     }
     fn allows(&self, g: Gen) -> bool {
         match g {
@@ -278,7 +358,17 @@ impl<'a> Mech<'a> {
         let open_s = item.open_slots(gd, Gen::Suffix) > 0;
         let no_attack = item.meta(gd, MetaKind::NoAttackMods);
         let no_caster = item.meta(gd, MetaKind::NoCasterMods);
-        let key = PoolKey { base: item.base, infl: item.influences.0, ilvl: item.ilvl, groups, open_p, open_s, opts, no_attack, no_caster };
+        let key = PoolKey {
+            base: item.base,
+            infl: item.influences.0,
+            ilvl: item.ilvl,
+            groups,
+            open_p,
+            open_s,
+            opts,
+            no_attack,
+            no_caster,
+        };
         if let Some(p) = self.cache.borrow().get(&key) {
             return p.clone();
         }
@@ -286,7 +376,10 @@ impl<'a> Mech<'a> {
         let mut weights = Vec::new();
         for &(mi, w) in gd.spawn_pool(item.base, item.influences, item.ilvl).iter() {
             let m = gd.m(mi);
-            if !opts.allows(m.gen) || (m.gen == Gen::Prefix && !open_p) || (m.gen == Gen::Suffix && !open_s) {
+            if !opts.allows(m.gen)
+                || (m.gen == Gen::Prefix && !open_p)
+                || (m.gen == Gen::Suffix && !open_s)
+            {
                 continue;
             }
             if let Some(i) = opts.influence_only {
@@ -307,7 +400,10 @@ impl<'a> Mech<'a> {
             {
                 continue;
             }
-            if m.group_ids.iter().any(|g| key.groups.binary_search(g).is_ok()) {
+            if m.group_ids
+                .iter()
+                .any(|g| key.groups.binary_search(g).is_ok())
+            {
                 continue;
             }
             mods.push(mi);
@@ -325,7 +421,12 @@ impl<'a> Mech<'a> {
         p
     }
 
-    pub fn add_random_mod(&self, item: &Item, ch: &mut dyn Chooser, opts: PoolOpts) -> Option<Item> {
+    pub fn add_random_mod(
+        &self,
+        item: &Item,
+        ch: &mut dyn Chooser,
+        opts: PoolOpts,
+    ) -> Option<Item> {
         let p = self.pool(item, opts);
         if p.mods.is_empty() {
             return None;
@@ -336,7 +437,13 @@ impl<'a> Mech<'a> {
     }
 
     /// Add random mods until the item has `n_total` mods (or nothing can roll).
-    pub fn fill_random(&self, mut item: Item, ch: &mut dyn Chooser, n_total: usize, opts: PoolOpts) -> Item {
+    pub fn fill_random(
+        &self,
+        mut item: Item,
+        ch: &mut dyn Chooser,
+        n_total: usize,
+        opts: PoolOpts,
+    ) -> Item {
         while item.mods.len() < n_total {
             match self.add_random_mod(&item, ch, opts) {
                 Some(n) => item = n,
@@ -374,7 +481,11 @@ impl<'a> Mech<'a> {
                 continue;
             }
             let cands: Vec<usize> = (0..item.mods.len())
-                .filter(|&i| gd.m(item.mods[i].m).gen == gen && !Item::is_metamod(gd, item.mods[i].m) && !prot[i])
+                .filter(|&i| {
+                    gd.m(item.mods[i].m).gen == gen
+                        && !Item::is_metamod(gd, item.mods[i].m)
+                        && !prot[i]
+                })
                 .collect();
             match lock {
                 Lock::Full => {
@@ -415,41 +526,82 @@ impl<'a> Mech<'a> {
 
     // -------------------------------------------------------------- basic currency
     pub fn transmute(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(item.rarity == Rarity::Normal, || format!("Orb of Transmutation needs a normal item (item is {}).", item.rarity.name()))?;
-        let it = Item { rarity: Rarity::Magic, preview_lock: false, ..item.clone() };
+        require(item.rarity == Rarity::Normal, || {
+            format!(
+                "Orb of Transmutation needs a normal item (item is {}).",
+                item.rarity.name()
+            )
+        })?;
+        let it = Item {
+            rarity: Rarity::Magic,
+            preview_lock: false,
+            ..item.clone()
+        };
         let n = item.mods.len() + self.count(ch, &MAGIC_MOD_COUNT, "magic_mod_count");
         Ok(self.fill_random(it, ch, n, PoolOpts::both()))
     }
 
     pub fn alteration(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(item.rarity == Rarity::Magic, || format!("Orb of Alteration needs a magic item (item is {}).", item.rarity.name()))?;
+        require(item.rarity == Rarity::Magic, || {
+            format!(
+                "Orb of Alteration needs a magic item (item is {}).",
+                item.rarity.name()
+            )
+        })?;
         let keep: Vec<Roll> = item.mods.iter().filter(|r| r.fractured).copied().collect();
         let n = keep.len() + self.count(ch, &MAGIC_MOD_COUNT, "magic_mod_count");
         Ok(self.fill_random(item.with_mods(keep), ch, n, PoolOpts::both()))
     }
 
     pub fn augment(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(item.rarity == Rarity::Magic, || "Orb of Augmentation needs a magic item.".into())?;
-        require(item.mods.len() < 2, || "Orb of Augmentation needs a magic item with an open affix.".into())?;
-        Ok(self.add_random_mod(item, ch, PoolOpts::both()).unwrap_or_else(|| item.clone()))
+        require(item.rarity == Rarity::Magic, || {
+            "Orb of Augmentation needs a magic item.".into()
+        })?;
+        require(item.mods.len() < 2, || {
+            "Orb of Augmentation needs a magic item with an open affix.".into()
+        })?;
+        Ok(self
+            .add_random_mod(item, ch, PoolOpts::both())
+            .unwrap_or_else(|| item.clone()))
     }
 
     pub fn regal(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(item.rarity == Rarity::Magic, || format!("Regal Orb needs a magic item (item is {}).", item.rarity.name()))?;
-        let it = Item { rarity: Rarity::Rare, ..item.clone() };
-        Ok(self.add_random_mod(&it, ch, PoolOpts::both()).unwrap_or_else(|| it.with_mods(it.mods.clone())))
+        require(item.rarity == Rarity::Magic, || {
+            format!(
+                "Regal Orb needs a magic item (item is {}).",
+                item.rarity.name()
+            )
+        })?;
+        let it = Item {
+            rarity: Rarity::Rare,
+            ..item.clone()
+        };
+        Ok(self
+            .add_random_mod(&it, ch, PoolOpts::both())
+            .unwrap_or_else(|| it.with_mods(it.mods.clone())))
     }
 
     pub fn alchemy(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(item.rarity == Rarity::Normal, || "Orb of Alchemy needs a normal item.".into())?;
-        let it = Item { rarity: Rarity::Rare, preview_lock: false, ..item.clone() };
+        require(item.rarity == Rarity::Normal, || {
+            "Orb of Alchemy needs a normal item.".into()
+        })?;
+        let it = Item {
+            rarity: Rarity::Rare,
+            preview_lock: false,
+            ..item.clone()
+        };
         let n = item.mods.len() + self.rare_count(item, ch);
         Ok(self.fill_random(it, ch, n, PoolOpts::both()))
     }
 
     /// Chaos Orb: reroll a rare's mods, keeping fractured and protected mods (rule chaos_keeps_locked).
     pub fn chaos(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(item.rarity == Rarity::Rare, || format!("Chaos Orb needs a rare item (item is {}).", item.rarity.name()))?;
+        require(item.rarity == Rarity::Rare, || {
+            format!(
+                "Chaos Orb needs a rare item (item is {}).",
+                item.rarity.name()
+            )
+        })?;
         self.rule("chaos_keeps_locked");
         let prot = self.protected(item, ch);
         let keep = self.kept(item, &prot, false);
@@ -459,20 +611,36 @@ impl<'a> Mech<'a> {
 
     pub fn exalt(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
         let gd = self.gd;
-        require(item.rarity == Rarity::Rare, || "Exalted Orb needs a rare item.".into())?;
+        require(item.rarity == Rarity::Rare, || {
+            "Exalted Orb needs a rare item.".into()
+        })?;
         require(
-            item.mods.len() < 6 && (item.open_slots(gd, Gen::Prefix) > 0 || item.open_slots(gd, Gen::Suffix) > 0),
+            item.mods.len() < 6
+                && (item.open_slots(gd, Gen::Prefix) > 0 || item.open_slots(gd, Gen::Suffix) > 0),
             || "Exalted Orb needs a rare item with an open prefix or suffix.".into(),
         )?;
-        self.add_random_mod(item, ch, PoolOpts::both()).ok_or_else(|| CraftError("No modifier can roll on this item (all eligible groups taken).".into()))
+        self.add_random_mod(item, ch, PoolOpts::both())
+            .ok_or_else(|| {
+                CraftError("No modifier can roll on this item (all eligible groups taken).".into())
+            })
     }
 
     /// Orb of Annulment (rule annul_protected).
     pub fn annul(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(matches!(item.rarity, Rarity::Magic | Rarity::Rare), || "Orb of Annulment needs a magic or rare item.".into())?;
+        require(matches!(item.rarity, Rarity::Magic | Rarity::Rare), || {
+            "Orb of Annulment needs a magic or rare item.".into()
+        })?;
         let prot = self.protected(item, ch);
-        let cands: Vec<Roll> = item.mods.iter().zip(&prot).filter(|(_, p)| !**p).map(|(r, _)| *r).collect();
-        require(!cands.is_empty(), || "Orb of Annulment: no removable modifier.".into())?;
+        let cands: Vec<Roll> = item
+            .mods
+            .iter()
+            .zip(&prot)
+            .filter(|(_, p)| !**p)
+            .map(|(r, _)| *r)
+            .collect();
+        require(!cands.is_empty(), || {
+            "Orb of Annulment: no removable modifier.".into()
+        })?;
         self.rule("annul_protected");
         let v = cands[ch.uniform(cands.len())];
         Ok(item.without(&v))
@@ -484,7 +652,10 @@ impl<'a> Mech<'a> {
         let prot = self.protected(item, ch);
         let keep = self.kept(item, &prot, true);
         let it = item.with_mods(keep);
-        let (np, ns) = (it.n_side(self.gd, Gen::Prefix), it.n_side(self.gd, Gen::Suffix));
+        let (np, ns) = (
+            it.n_side(self.gd, Gen::Prefix),
+            it.n_side(self.gd, Gen::Suffix),
+        );
         let rarity = if it.mods.is_empty() {
             Rarity::Normal
         } else if np <= 1 && ns <= 1 {
@@ -497,33 +668,76 @@ impl<'a> Mech<'a> {
 
     // -------------------------------------------------------------- influence
     /// Conqueror exalted orbs (rule conqueror_exalt).
-    pub fn conqueror_exalt(&self, item: &Item, ch: &mut dyn Chooser, inf: Influence) -> CResult<Item> {
-        require(inf.is_conqueror(), || format!("{} is not a conqueror influence.", inf.name()))?;
+    pub fn conqueror_exalt(
+        &self,
+        item: &Item,
+        ch: &mut dyn Chooser,
+        inf: Influence,
+    ) -> CResult<Item> {
+        require(inf.is_conqueror(), || {
+            format!("{} is not a conqueror influence.", inf.name())
+        })?;
         let name = crate::data::title(inf.name());
-        require(item.rarity == Rarity::Rare, || format!("{name}'s Exalted Orb needs a rare item."))?;
-        require(item.influences.is_empty(), || format!("{name}'s Exalted Orb needs an item with no influence."))?;
-        self.gd.influence_tag(item.base, inf).map_err(|e| CraftError(e.0))?;
+        require(item.rarity == Rarity::Rare, || {
+            format!("{name}'s Exalted Orb needs a rare item.")
+        })?;
+        require(item.influences.is_empty(), || {
+            format!("{name}'s Exalted Orb needs an item with no influence.")
+        })?;
+        self.gd
+            .influence_tag(item.base, inf)
+            .map_err(|e| CraftError(e.0))?;
         self.rule("conqueror_exalt");
-        let it = Item { influences: item.influences.with(inf), ..item.clone() };
-        let opts = PoolOpts { influence_only: Some(inf), ..PoolOpts::both() };
-        self.add_random_mod(&it, ch, opts).ok_or_else(|| CraftError(format!("No {name} modifier can roll (check open prefix/suffix slots).")))
+        let it = Item {
+            influences: item.influences.with(inf),
+            ..item.clone()
+        };
+        let opts = PoolOpts {
+            influence_only: Some(inf),
+            ..PoolOpts::both()
+        };
+        self.add_random_mod(&it, ch, opts).ok_or_else(|| {
+            CraftError(format!(
+                "No {name} modifier can roll (check open prefix/suffix slots)."
+            ))
+        })
     }
 
     /// Orb of Dominance (rules dominance, dominance_uniform).
     pub fn dominance(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
         let gd = self.gd;
-        require(ARMOUR_CLASSES.contains(&gd.item_class(item.base)), || "Orb of Dominance only works on body armours, boots, gloves and helmets.".into())?;
-        require(item.rarity == Rarity::Rare, || "Orb of Dominance needs a rare item.".into())?;
+        require(ARMOUR_CLASSES.contains(&gd.item_class(item.base)), || {
+            "Orb of Dominance only works on body armours, boots, gloves and helmets.".into()
+        })?;
+        require(item.rarity == Rarity::Rare, || {
+            "Orb of Dominance needs a rare item.".into()
+        })?;
         let infl = item.influenced_mods(gd);
-        require(infl.len() >= 2, || format!("Orb of Dominance needs at least two influenced modifiers (item has {}).", infl.len()))?;
+        require(infl.len() >= 2, || {
+            format!(
+                "Orb of Dominance needs at least two influenced modifiers (item has {}).",
+                infl.len()
+            )
+        })?;
         let prot = self.protected(item, ch);
-        let elig: Vec<Roll> = infl.iter().filter(|r| !item.mods.iter().zip(&prot).any(|(x, p)| x == *r && *p)).copied().collect();
-        require(elig.len() >= 2, || "Orb of Dominance: fewer than two influenced modifiers can be changed (fractured or protected by a 'cannot be changed' metamod).".into())?;
+        let elig: Vec<Roll> = infl
+            .iter()
+            .filter(|r| !item.mods.iter().zip(&prot).any(|(x, p)| x == *r && *p))
+            .copied()
+            .collect();
+        require(elig.len() >= 2, || {
+            "Orb of Dominance: fewer than two influenced modifiers can be changed (fractured or protected by a 'cannot be changed' metamod).".into()
+        })?;
         self.rule("dominance");
         self.rule("dominance_uniform");
         let ti = ch.uniform(elig.len());
         let target = elig[ti];
-        let others: Vec<Roll> = elig.iter().enumerate().filter(|(i, _)| *i != ti).map(|(_, r)| *r).collect();
+        let others: Vec<Roll> = elig
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| *i != ti)
+            .map(|(_, r)| *r)
+            .collect();
         let victim = others[ch.uniform(others.len())];
         let fam = gd.family(target.m).expect("influenced mods have families");
         let tiers = gd.tiers_for(gd.family_idx(target.m), item.base);
@@ -535,8 +749,16 @@ impl<'a> Mech<'a> {
                 _ => fam.elevated.unwrap_or(target.m),
             }
         };
-        let mut mods: Vec<Roll> = item.mods.iter().filter(|r| **r != target && **r != victim).copied().collect();
-        mods.push(Roll { m: new_id, ..target });
+        let mut mods: Vec<Roll> = item
+            .mods
+            .iter()
+            .filter(|r| **r != target && **r != victim)
+            .copied()
+            .collect();
+        mods.push(Roll {
+            m: new_id,
+            ..target
+        });
         Ok(item.with_mods(mods))
     }
 
@@ -544,9 +766,17 @@ impl<'a> Mech<'a> {
     /// awakener_uniform_fill).
     pub fn awaken(&self, target: &Item, donor: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
         let gd = self.gd;
-        require(gd.item_class(target.base) == gd.item_class(donor.base), || "Awakener's Orb: both items must be of the same item class.".into())?;
-        require(!target.influences.is_empty() && !donor.influences.is_empty(), || "Awakener's Orb: both items must be influenced.".into())?;
-        require(!target.influences.intersects(donor.influences), || "Awakener's Orb: the items must have different influences.".into())?;
+        require(
+            gd.item_class(target.base) == gd.item_class(donor.base),
+            || "Awakener's Orb: both items must be of the same item class.".into(),
+        )?;
+        require(
+            !target.influences.is_empty() && !donor.influences.is_empty(),
+            || "Awakener's Orb: both items must be influenced.".into(),
+        )?;
+        require(!target.influences.intersects(donor.influences), || {
+            "Awakener's Orb: the items must have different influences.".into()
+        })?;
         self.rule("awakener");
         self.rule("awakener_uniform_fill");
         let mut kept: Vec<Roll> = Vec::new();
@@ -556,11 +786,22 @@ impl<'a> Mech<'a> {
                 kept.push(infl[ch.uniform(infl.len())]);
             }
         }
-        if kept.len() == 2 && gd.m(kept[0].m).group_ids.iter().any(|g| gd.m(kept[1].m).group_ids.contains(g)) {
+        if kept.len() == 2
+            && gd
+                .m(kept[0].m)
+                .group_ids
+                .iter()
+                .any(|g| gd.m(kept[1].m).group_ids.contains(g))
+        {
             let k = kept[ch.uniform(2)];
             kept = vec![k];
         }
-        let res = Item { rarity: Rarity::Rare, influences: target.influences.union(donor.influences), preview_lock: false, ..target.clone() };
+        let res = Item {
+            rarity: Rarity::Rare,
+            influences: target.influences.union(donor.influences),
+            preview_lock: false,
+            ..target.clone()
+        };
         let res = res.with_mods(kept.iter().map(|r| Roll::new(r.m)).collect());
         let n = kept.len().max(self.rare_count(target, ch));
         Ok(self.fill_random(res, ch, n, PoolOpts::both()))
@@ -574,21 +815,37 @@ impl<'a> Mech<'a> {
         let gd = self.gd;
         let tag = harvest_tag(tag);
         require(harvest_cost(tag).is_some() || tag == "influence", || {
-            format!("Unknown Harvest reforge tag '{tag}'. Known: {}.", HARVEST_REFORGE.iter().map(|x| x.0).collect::<Vec<_>>().join(", "))
+            format!(
+                "Unknown Harvest reforge tag '{tag}'. Known: {}.",
+                HARVEST_REFORGE
+                    .iter()
+                    .map(|x| x.0)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
         })?;
-        require(item.rarity == Rarity::Rare, || "Harvest reforge needs a rare item.".into())?;
+        require(item.rarity == Rarity::Rare, || {
+            "Harvest reforge needs a rare item.".into()
+        })?;
         // "influence": Reforge an Influenced Rare item ... including a Influence modifier
         // (rule harvest_reforge_influence)
         let tag_idx = if tag == "influence" {
-            require(!item.influences.is_empty(), || "Harvest reforge influence needs an influenced rare item.".into())?;
+            require(!item.influences.is_empty(), || {
+                "Harvest reforge influence needs an influenced rare item.".into()
+            })?;
             self.rule("harvest_reforge_influence");
             None
         } else {
-            Some(gd.tag_idx(tag).ok_or_else(|| CraftError(format!("no mod has the tag '{tag}'")))?)
+            Some(
+                gd.tag_idx(tag)
+                    .ok_or_else(|| CraftError(format!("no mod has the tag '{tag}'")))?,
+            )
         };
         let prot = self.protected(item, ch);
         let keep = self.kept(item, &prot, true); // metamod consumed
-        if item.lock_on(gd, Gen::Prefix) != Lock::None || item.lock_on(gd, Gen::Suffix) != Lock::None {
+        if item.lock_on(gd, Gen::Prefix) != Lock::None
+            || item.lock_on(gd, Gen::Suffix) != Lock::None
+        {
             self.rule("reforge_respects_lock");
             self.rule("reforge_consumes_lock");
             self.rule("reforge_fills_locked_side");
@@ -598,14 +855,35 @@ impl<'a> Mech<'a> {
         let (p_ok, s_ok) = if self.sw.reforge_fills_locked_side {
             (true, true)
         } else {
-            (!item.side_closed_by_lock(gd, Gen::Prefix), !item.side_closed_by_lock(gd, Gen::Suffix))
+            (
+                !item.side_closed_by_lock(gd, Gen::Prefix),
+                !item.side_closed_by_lock(gd, Gen::Suffix),
+            )
         };
-        let sides = PoolOpts { prefix: p_ok, suffix: s_ok, ..PoolOpts::default() };
+        let sides = PoolOpts {
+            prefix: p_ok,
+            suffix: s_ok,
+            ..PoolOpts::default()
+        };
         let first_pool = match tag_idx {
-            Some(t) => self.pool(&base, PoolOpts { tag: Some(t), ..sides }),
-            None => self.pool(&base, PoolOpts { influenced: true, ..sides }),
+            Some(t) => self.pool(
+                &base,
+                PoolOpts {
+                    tag: Some(t),
+                    ..sides
+                },
+            ),
+            None => self.pool(
+                &base,
+                PoolOpts {
+                    influenced: true,
+                    ..sides
+                },
+            ),
         };
-        require(!first_pool.mods.is_empty(), || format!("Harvest reforge {tag}: no {tag} modifier can roll on the changeable side(s) of this item."))?;
+        require(!first_pool.mods.is_empty(), || {
+            format!("Harvest reforge {tag}: no {tag} modifier can roll on the changeable side(s) of this item.")
+        })?;
         let first = first_pool.mods[ch.weighted(&first_pool.weights)];
         let mut mods = keep;
         mods.push(Roll::new(first));
@@ -622,17 +900,44 @@ impl<'a> Mech<'a> {
         let gd = self.gd;
         let tag = harvest_tag(tag);
         require(harvest_add_cost(tag).is_some(), || {
-            format!("Unknown Harvest add tag '{tag}'. Known: {}.", HARVEST_ADD.iter().map(|x| x.0).collect::<Vec<_>>().join(", "))
+            format!(
+                "Unknown Harvest add tag '{tag}'. Known: {}.",
+                HARVEST_ADD
+                    .iter()
+                    .map(|x| x.0)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
         })?;
-        require(item.influences.is_empty(), || "Harvest 'add a mod and remove another' only works on non-Influenced items.".into())?;
-        require(matches!(item.rarity, Rarity::Magic | Rarity::Rare), || "Harvest 'add a mod and remove another' needs a magic or rare item.".into())?;
+        require(item.influences.is_empty(), || {
+            "Harvest 'add a mod and remove another' only works on non-Influenced items.".into()
+        })?;
+        require(matches!(item.rarity, Rarity::Magic | Rarity::Rare), || {
+            "Harvest 'add a mod and remove another' needs a magic or rare item.".into()
+        })?;
         self.rule("harvest_add");
-        let t = gd.tag_idx(tag).ok_or_else(|| CraftError(format!("no mod has the tag '{tag}'")))?;
-        let pool = self.pool(item, PoolOpts { tag: Some(t), ..PoolOpts::both() });
-        require(!pool.mods.is_empty(), || format!("Harvest add {tag}: no {tag} modifier can roll (needs an open slot on a side with {tag} mods)."))?;
+        let t = gd
+            .tag_idx(tag)
+            .ok_or_else(|| CraftError(format!("no mod has the tag '{tag}'")))?;
+        let pool = self.pool(
+            item,
+            PoolOpts {
+                tag: Some(t),
+                ..PoolOpts::both()
+            },
+        );
+        require(!pool.mods.is_empty(), || {
+            format!("Harvest add {tag}: no {tag} modifier can roll (needs an open slot on a side with {tag} mods).")
+        })?;
         let new = Roll::new(pool.mods[ch.weighted(&pool.weights)]);
         let prot = self.protected(item, ch);
-        let cands: Vec<Roll> = item.mods.iter().zip(&prot).filter(|(_, p)| !**p).map(|(r, _)| *r).collect();
+        let cands: Vec<Roll> = item
+            .mods
+            .iter()
+            .zip(&prot)
+            .filter(|(_, p)| !**p)
+            .map(|(r, _)| *r)
+            .collect();
         let it = item.with_added(new);
         if cands.is_empty() {
             return Ok(it);
@@ -646,16 +951,33 @@ impl<'a> Mech<'a> {
         let gd = self.gd;
         let e = &gd.essences[essence];
         let cls = gd.item_class(item.base);
-        let mid = e.mods.get(cls).and_then(|id| gd.mod_idx(id)).ok_or_else(|| CraftError(format!("{} cannot be used on {cls}.", e.name)))?;
-        require(matches!(item.rarity, Rarity::Normal | Rarity::Rare), || format!("{} needs a normal or rare item.", e.name))?;
+        let mid = e
+            .mods
+            .get(cls)
+            .and_then(|id| gd.mod_idx(id))
+            .ok_or_else(|| CraftError(format!("{} cannot be used on {cls}.", e.name)))?;
+        require(matches!(item.rarity, Rarity::Normal | Rarity::Rare), || {
+            format!("{} needs a normal or rare item.", e.name)
+        })?;
         // rule essence_metamod: essences cannot be used on items with metamods (PoE Wiki)
-        require(!item.mods.iter().any(|r| gd.m(r.m).meta.is_some()), || format!("{} cannot be used on an item with a metamod (PoE Wiki).", e.name))?;
+        require(!item.mods.iter().any(|r| gd.m(r.m).meta.is_some()), || {
+            format!(
+                "{} cannot be used on an item with a metamod (PoE Wiki).",
+                e.name
+            )
+        })?;
         if let Some(lim) = e.item_level_restriction {
-            require(item.ilvl <= lim, || format!("{} only works on items up to item level {lim}.", e.name))?;
+            require(item.ilvl <= lim, || {
+                format!("{} only works on items up to item level {lim}.", e.name)
+            })?;
         }
         let mut keep: Vec<Roll> = item.mods.iter().filter(|r| r.fractured).copied().collect();
         keep.push(Roll::new(mid));
-        let it = Item { rarity: Rarity::Rare, ..item.clone() }.with_mods(keep);
+        let it = Item {
+            rarity: Rarity::Rare,
+            ..item.clone()
+        }
+        .with_mods(keep);
         let n = it.mods.len().max(self.rare_count(item, ch));
         Ok(self.fill_random(it, ch, n, PoolOpts::both()))
     }
@@ -665,12 +987,34 @@ impl<'a> Mech<'a> {
     pub fn bench_craft(&self, item: &Item, mi: ModIdx) -> CResult<Item> {
         let gd = self.gd;
         let m = gd.m(mi);
-        require(matches!(item.rarity, Rarity::Magic | Rarity::Rare), || "The crafting bench needs a magic or rare item.".into())?;
-        require(item.open_slots(gd, m.gen) > 0, || format!("Bench craft '{}' needs an open {}.", m.short(), m.gen.name()))?;
-        let limit = if item.meta(gd, MetaKind::Multimod) || m.meta == Some(MetaKind::Multimod) { 3 } else { 1 };
-        require(item.crafted_count() < limit, || "Item already has a crafted modifier (craft 'multimod' first to allow up to 3).".into())?;
+        require(matches!(item.rarity, Rarity::Magic | Rarity::Rare), || {
+            "The crafting bench needs a magic or rare item.".into()
+        })?;
+        require(item.open_slots(gd, m.gen) > 0, || {
+            format!(
+                "Bench craft '{}' needs an open {}.",
+                m.short(),
+                m.gen.name()
+            )
+        })?;
+        let limit = if item.meta(gd, MetaKind::Multimod) || m.meta == Some(MetaKind::Multimod) {
+            3
+        } else {
+            1
+        };
+        require(item.crafted_count() < limit, || {
+            "Item already has a crafted modifier (craft 'multimod' first to allow up to 3).".into()
+        })?;
         let groups = item.group_ids(gd);
-        require(!m.group_ids.iter().any(|g| groups.binary_search(g).is_ok()), || format!("Item already has a modifier of group {}.", m.groups.first().cloned().unwrap_or_default()))?;
+        require(
+            !m.group_ids.iter().any(|g| groups.binary_search(g).is_ok()),
+            || {
+                format!(
+                    "Item already has a modifier of group {}.",
+                    m.groups.first().cloned().unwrap_or_default()
+                )
+            },
+        )?;
         self.rule("bench_metamod_slot");
         Ok(item.with_added(Roll::crafted(mi)))
     }
@@ -688,79 +1032,150 @@ impl<'a> Mech<'a> {
         self.rule("beast_metamod_magic_only");
         self.rule("beast_metamod_choice");
         let cls = self.gd.item_class(item.base);
-        let opt = self.gd.metamod_for(cls, kind).ok_or_else(|| CraftError(format!("no such metamod for {cls}")))?;
+        let opt = self
+            .gd
+            .metamod_for(cls, kind)
+            .ok_or_else(|| CraftError(format!("no such metamod for {cls}")))?;
         self.bench_craft(item, opt.module)
     }
 
     /// "Add a Mod to a <Conqueror> Item" (rule beast_add_influence_mod).
-    pub fn beast_add_influence_mod(&self, item: &Item, ch: &mut dyn Chooser, inf: Influence) -> CResult<Item> {
-        require(item.rarity == Rarity::Rare, || "This beastcraft needs a rare item.".into())?;
-        require(item.influences.contains(inf), || format!("Item has no {} influence.", crate::data::title(inf.name())))?;
+    pub fn beast_add_influence_mod(
+        &self,
+        item: &Item,
+        ch: &mut dyn Chooser,
+        inf: Influence,
+    ) -> CResult<Item> {
+        require(item.rarity == Rarity::Rare, || {
+            "This beastcraft needs a rare item.".into()
+        })?;
+        require(item.influences.contains(inf), || {
+            format!("Item has no {} influence.", crate::data::title(inf.name()))
+        })?;
         self.rule("beast_add_influence_mod");
-        let opts = PoolOpts { influence_only: Some(inf), ..PoolOpts::both() };
-        self.add_random_mod(item, ch, opts).ok_or_else(|| CraftError(format!("No {} modifier can be added (open slot?).", crate::data::title(inf.name()))))
+        let opts = PoolOpts {
+            influence_only: Some(inf),
+            ..PoolOpts::both()
+        };
+        self.add_random_mod(item, ch, opts).ok_or_else(|| {
+            CraftError(format!(
+                "No {} modifier can be added (open slot?).",
+                crate::data::title(inf.name())
+            ))
+        })
     }
 
     /// "Add a Prefix, Remove a Random Suffix" and the reverse (rule beast_swap_side).
     pub fn beast_swap_side(&self, item: &Item, ch: &mut dyn Chooser, add: Gen) -> CResult<Item> {
         let gd = self.gd;
-        require(item.rarity == Rarity::Rare, || "This beastcraft needs a rare item.".into())?;
+        require(item.rarity == Rarity::Rare, || {
+            "This beastcraft needs a rare item.".into()
+        })?;
         self.rule("beast_swap_side");
         let rem = add.other_side();
         let prot = self.protected(item, ch);
-        let cands: Vec<Roll> = item.mods.iter().zip(&prot).filter(|(r, p)| !**p && gd.m(r.m).gen == rem).map(|(r, _)| *r).collect();
+        let cands: Vec<Roll> = item
+            .mods
+            .iter()
+            .zip(&prot)
+            .filter(|(r, p)| !**p && gd.m(r.m).gen == rem)
+            .map(|(r, _)| *r)
+            .collect();
         // PoE Wiki: with the removal side locked the beastcraft "will add without removing"
         let it = if cands.is_empty() && item.lock_on(gd, rem) != Lock::None {
             item.clone()
         } else {
-            require(!cands.is_empty(), || format!("No removable {}.", rem.name()))?;
+            require(!cands.is_empty(), || {
+                format!("No removable {}.", rem.name())
+            })?;
             item.without(&cands[ch.uniform(cands.len())])
         };
-        self.add_random_mod(&it, ch, PoolOpts::side(add)).ok_or_else(|| CraftError(format!("No {} can roll.", add.name())))
+        self.add_random_mod(&it, ch, PoolOpts::side(add))
+            .ok_or_else(|| CraftError(format!("No {} can roll.", add.name())))
     }
 
     pub fn hinekoras_lock(&self, item: &Item) -> CResult<Item> {
-        require(item.rarity == Rarity::Magic, || "The Hinekora's Lock beastcraft needs a magic item.".into())?;
-        Ok(Item { preview_lock: true, ..item.clone() })
+        require(item.rarity == Rarity::Magic, || {
+            "The Hinekora's Lock beastcraft needs a magic item.".into()
+        })?;
+        Ok(Item {
+            preview_lock: true,
+            ..item.clone()
+        })
     }
 
     /// Max-links beastcraft (rule max_links).
     pub fn max_links(&self, item: &Item) -> Item {
         self.rule("max_links");
-        let n = if self.gd.item_class(item.base) == "Body Armour" { 6 } else { 4 };
-        Item { links: n, ..item.clone() }
+        let n = if self.gd.item_class(item.base) == "Body Armour" {
+            6
+        } else {
+            4
+        };
+        Item {
+            links: n,
+            ..item.clone()
+        }
     }
 
     /// Omen of Blanching: STUB, cost only.
     pub fn omen_blanching(&self, item: &Item) -> Item {
-        Item { white_sockets: item.white_sockets.max(2), ..item.clone() }
+        Item {
+            white_sockets: item.white_sockets.max(2),
+            ..item.clone()
+        }
     }
 
     /// Fracturing Orb (rule fracture).
     pub fn fracture(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
-        require(item.rarity == Rarity::Rare && item.mods.len() >= 4, || "Fracturing Orb needs a rare item with 4+ modifiers.".into())?;
-        require(!item.mods.iter().any(|r| r.fractured), || "Item already has a fractured modifier.".into())?;
+        require(item.rarity == Rarity::Rare && item.mods.len() >= 4, || {
+            "Fracturing Orb needs a rare item with 4+ modifiers.".into()
+        })?;
+        require(!item.mods.iter().any(|r| r.fractured), || {
+            "Item already has a fractured modifier.".into()
+        })?;
         self.rule("fracture");
         let cands: Vec<Roll> = item.mods.iter().filter(|r| !r.crafted).copied().collect();
         let t = cands[ch.uniform(cands.len())];
         let mut mods: Vec<Roll> = item.mods.iter().filter(|r| **r != t).copied().collect();
-        mods.push(Roll { fractured: true, ..t });
+        mods.push(Roll {
+            fractured: true,
+            ..t
+        });
         Ok(item.with_mods(mods))
     }
 
     /// Veiled Exalted Orb (rule veiled_exalt).
     pub fn veiled_exalt(&self, item: &Item, ch: &mut dyn Chooser) -> CResult<Item> {
         let gd = self.gd;
-        require(item.rarity == Rarity::Rare, || "Veiled Exalted Orb needs a rare item.".into())?;
+        require(item.rarity == Rarity::Rare, || {
+            "Veiled Exalted Orb needs a rare item.".into()
+        })?;
         self.rule("veiled_exalt");
         let prot = self.protected(item, ch);
-        let cands: Vec<Roll> = item.mods.iter().zip(&prot).filter(|(_, p)| !**p).map(|(r, _)| *r).collect();
-        require(!cands.is_empty(), || "Veiled Exalted Orb: no removable modifier.".into())?;
+        let cands: Vec<Roll> = item
+            .mods
+            .iter()
+            .zip(&prot)
+            .filter(|(_, p)| !**p)
+            .map(|(r, _)| *r)
+            .collect();
+        require(!cands.is_empty(), || {
+            "Veiled Exalted Orb: no removable modifier.".into()
+        })?;
         let v = cands[ch.uniform(cands.len())];
         let it = item.without(&v);
-        let sides: Vec<Gen> = [Gen::Prefix, Gen::Suffix].into_iter().filter(|g| it.open_slots(gd, *g) > 0).collect();
+        let sides: Vec<Gen> = [Gen::Prefix, Gen::Suffix]
+            .into_iter()
+            .filter(|g| it.open_slots(gd, *g) > 0)
+            .collect();
         let side = sides[ch.uniform(sides.len())];
-        let vm = if side == Gen::Prefix { self.veiled_prefix } else { self.veiled_suffix }.ok_or_else(|| CraftError("veiled placeholder mods missing from data".into()))?;
+        let vm = if side == Gen::Prefix {
+            self.veiled_prefix
+        } else {
+            self.veiled_suffix
+        }
+        .ok_or_else(|| CraftError("veiled placeholder mods missing from data".into()))?;
         Ok(it.with_added(Roll::new(vm)))
     }
 
@@ -776,15 +1191,26 @@ impl<'a> Mech<'a> {
             .find(|r| Some(r.m) == self.veiled_prefix || Some(r.m) == self.veiled_suffix)
             .copied()
             .ok_or_else(|| CraftError("unveil: the item has no veiled modifier.".into()))?;
-        let gen = if Some(v.m) == self.veiled_prefix { Gen::Prefix } else { Gen::Suffix };
+        let gen = if Some(v.m) == self.veiled_prefix {
+            Gen::Prefix
+        } else {
+            Gen::Suffix
+        };
         let rest = item.without(&v);
         let present = rest.group_ids(gd);
         let mut pool: Vec<(ModIdx, u32)> = gd
             .unveil_pool(item.base, item.influences, item.ilvl, gen)
             .into_iter()
-            .filter(|(m, _)| !gd.m(*m).group_ids.iter().any(|g| present.binary_search(g).is_ok()))
+            .filter(|(m, _)| {
+                !gd.m(*m)
+                    .group_ids
+                    .iter()
+                    .any(|g| present.binary_search(g).is_ok())
+            })
             .collect();
-        require(!pool.is_empty(), || "unveil: no unveiled modifier can appear.".into())?;
+        require(!pool.is_empty(), || {
+            "unveil: no unveiled modifier can appear.".into()
+        })?;
         let mut offers = Vec::new();
         while !pool.is_empty() && offers.len() < Self::UNVEIL_OPTIONS {
             let w: Vec<u32> = pool.iter().map(|x| x.1).collect();
@@ -809,12 +1235,24 @@ impl<'a> Mech<'a> {
     /// only the K highest tiers can roll, K = ceil(N/2) if N <= 6 else floor(N/2) + 1, and their
     /// weights are multiplied by N/K. `side` restricts it to one side (stand-in for a
     /// "cannot be changed" craft on the other side).
-    pub fn foulborn_exalt(&self, item: &Item, ch: &mut dyn Chooser, side: Option<Gen>) -> CResult<Item> {
-        require(item.rarity == Rarity::Rare, || "Foulborn Exalted Orb needs a rare item.".into())?;
+    pub fn foulborn_exalt(
+        &self,
+        item: &Item,
+        ch: &mut dyn Chooser,
+        side: Option<Gen>,
+    ) -> CResult<Item> {
+        require(item.rarity == Rarity::Rare, || {
+            "Foulborn Exalted Orb needs a rare item.".into()
+        })?;
         self.rule("foulborn_exalt");
         let opts = side.map(PoolOpts::side).unwrap_or_else(PoolOpts::both);
         let pool = self.pool(item, opts);
-        require(!pool.mods.is_empty(), || format!("Foulborn Exalted Orb: no open {}.", side.map(|g| g.name()).unwrap_or("affix")))?;
+        require(!pool.mods.is_empty(), || {
+            format!(
+                "Foulborn Exalted Orb: no open {}.",
+                side.map(|g| g.name()).unwrap_or("affix")
+            )
+        })?;
         let (mods, weights) = foulborn_cull(self.gd, &pool.mods, &pool.weights);
         let i = ch.weighted(&weights);
         Ok(item.with_added(Roll::new(mods[i])))

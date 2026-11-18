@@ -50,19 +50,36 @@ pub struct State {
 
 impl Default for State {
     fn default() -> Self {
-        State { item: None, aside: vec![], imprint: None, status: Status::Run, msg: Arc::from(""), value: F64::default() }
+        State {
+            item: None,
+            aside: vec![],
+            imprint: None,
+            status: Status::Run,
+            msg: Arc::from(""),
+            value: F64::default(),
+        }
     }
 }
 
 impl State {
     fn get_aside(&self, name: &str) -> Option<(&Item, f64)> {
-        self.aside.iter().find(|x| &*x.0 == name).map(|x| (&x.1, x.2.get()))
+        self.aside
+            .iter()
+            .find(|x| &*x.0 == name)
+            .map(|x| (&x.1, x.2.get()))
     }
     fn without_aside(&self, name: &str) -> Vec<(Arc<str>, Item, F64)> {
-        self.aside.iter().filter(|x| &*x.0 != name).cloned().collect()
+        self.aside
+            .iter()
+            .filter(|x| &*x.0 != name)
+            .cloned()
+            .collect()
     }
     pub fn with_item(&self, it: Item) -> State {
-        State { item: Some(it), ..self.clone() }
+        State {
+            item: Some(it),
+            ..self.clone()
+        }
     }
 }
 
@@ -169,19 +186,45 @@ impl<'a> Engine<'a> {
     }
 
     // -------------------------------------------------------------- names
-    pub fn resolve(&self, r: &str, item: Option<&Item>, line: usize, file: &Option<Arc<str>>) -> Result<FamIdx, RecipeError> {
-        let cls = item.map(|i| self.gd.item_class(i.base).to_string()).unwrap_or_default();
+    pub fn resolve(
+        &self,
+        r: &str,
+        item: Option<&Item>,
+        line: usize,
+        file: &Option<Arc<str>>,
+    ) -> Result<FamIdx, RecipeError> {
+        let cls = item
+            .map(|i| self.gd.item_class(i.base).to_string())
+            .unwrap_or_default();
         let key = (r.to_string(), cls.clone());
         if let Some(v) = self.resolve_cache.borrow().get(&key) {
-            return v.clone().map_err(|e| RecipeError::new(e, Some(line), file.clone()));
+            return v
+                .clone()
+                .map_err(|e| RecipeError::new(e, Some(line), file.clone()));
         }
-        let res = self.gd.resolve_mod(r, if cls.is_empty() { None } else { Some(cls.as_str()) }).map_err(|e| e.0);
+        let res = self
+            .gd
+            .resolve_mod(
+                r,
+                if cls.is_empty() {
+                    None
+                } else {
+                    Some(cls.as_str())
+                },
+            )
+            .map_err(|e| e.0);
         self.resolve_cache.borrow_mut().insert(key, res.clone());
         res.map_err(|e| RecipeError::new(e, Some(line), file.clone()))
     }
 
     // -------------------------------------------------------------- conditions
-    pub fn cond(&self, c: &Cond, st: &State, line: usize, file: &Option<Arc<str>>) -> Result<bool, RecipeError> {
+    pub fn cond(
+        &self,
+        c: &Cond,
+        st: &State,
+        line: usize,
+        file: &Option<Arc<str>>,
+    ) -> Result<bool, RecipeError> {
         Ok(match c {
             Cond::And(a, b) => self.cond(a, st, line, file)? && self.cond(b, st, line, file)?,
             Cond::Or(a, b) => self.cond(a, st, line, file)? || self.cond(b, st, line, file)?,
@@ -189,10 +232,19 @@ impl<'a> Engine<'a> {
             Cond::Const(b) => *b,
             other => {
                 let Some(item) = &st.item else {
-                    return Err(RecipeError::new("condition checked but there is no current item (missing 'buy'?)", Some(line), file.clone()));
+                    return Err(RecipeError::new(
+                        "condition checked but there is no current item (missing 'buy'?)",
+                        Some(line),
+                        file.clone(),
+                    ));
                 };
                 match other {
-                    Cond::Has { r, tier, elevated, line: l } => {
+                    Cond::Has {
+                        r,
+                        tier,
+                        elevated,
+                        line: l,
+                    } => {
                         let fam = self.resolve(r.s(), Some(item), *l, file)?;
                         let best = self.best_tier(item, fam);
                         match best {
@@ -205,8 +257,12 @@ impl<'a> Engine<'a> {
                         }
                     }
                     Cond::Is(r) => item.rarity.name() == r,
-                    Cond::Influenced(i) => Influence::parse(i).is_some_and(|i| item.influences.contains(i)),
-                    Cond::Cmp(op, a, b) => op.eval(self.value(a, item, file)?, self.value(b, item, file)?),
+                    Cond::Influenced(i) => {
+                        Influence::parse(i).is_some_and(|i| item.influences.contains(i))
+                    }
+                    Cond::Cmp(op, a, b) => {
+                        op.eval(self.value(a, item, file)?, self.value(b, item, file)?)
+                    }
                     _ => unreachable!(),
                 }
             }
@@ -214,7 +270,11 @@ impl<'a> Engine<'a> {
     }
 
     fn best_tier(&self, item: &Item, fam: FamIdx) -> Option<u32> {
-        item.mods.iter().filter(|r| self.gd.family_idx(r.m) == fam).map(|r| self.gd.tier(r.m, item.base)).min()
+        item.mods
+            .iter()
+            .filter(|r| self.gd.family_idx(r.m) == fam)
+            .map(|r| self.gd.tier(r.m, item.base))
+            .min()
     }
 
     fn value(&self, v: &Val, item: &Item, file: &Option<Arc<str>>) -> Result<f64, RecipeError> {
@@ -227,19 +287,26 @@ impl<'a> Engine<'a> {
             }
             Val::CountInfluence(i) => {
                 let inf = Influence::parse(i);
-                item.influenced_mods(gd).iter().filter(|r| gd.m(r.m).influence == inf).count() as f64
+                item.influenced_mods(gd)
+                    .iter()
+                    .filter(|r| gd.m(r.m).influence == inf)
+                    .count() as f64
             }
-            Val::Metric(m) => (match m {
-                Metric::PrefixCount => item.n_side(gd, Gen::Prefix),
-                Metric::SuffixCount => item.n_side(gd, Gen::Suffix),
-                Metric::ModCount => item.mods.len(),
-                Metric::OpenPrefix => item.open_slots(gd, Gen::Prefix),
-                Metric::OpenSuffix => item.open_slots(gd, Gen::Suffix),
-                Metric::InfluencedCount => item.influenced_mods(gd).len(),
-                Metric::ElevatedCount => item.mods.iter().filter(|r| gd.m(r.m).elevated).count(),
-                Metric::CraftedCount => item.crafted_count(),
-                Metric::Links => item.links as usize,
-            }) as f64,
+            Val::Metric(m) => {
+                (match m {
+                    Metric::PrefixCount => item.n_side(gd, Gen::Prefix),
+                    Metric::SuffixCount => item.n_side(gd, Gen::Suffix),
+                    Metric::ModCount => item.mods.len(),
+                    Metric::OpenPrefix => item.open_slots(gd, Gen::Prefix),
+                    Metric::OpenSuffix => item.open_slots(gd, Gen::Suffix),
+                    Metric::InfluencedCount => item.influenced_mods(gd).len(),
+                    Metric::ElevatedCount => {
+                        item.mods.iter().filter(|r| gd.m(r.m).elevated).count()
+                    }
+                    Metric::CraftedCount => item.crafted_count(),
+                    Metric::Links => item.links as usize,
+                }) as f64
+            }
         })
     }
 
@@ -277,7 +344,12 @@ impl<'a> Engine<'a> {
     }
 
     /// Execute one primitive action: (new state, cost).
-    pub fn primitive(&self, a: &Act, st: &State, ch: &mut dyn Chooser) -> Result<(State, Cost), RecipeError> {
+    pub fn primitive(
+        &self,
+        a: &Act,
+        st: &State,
+        ch: &mut dyn Chooser,
+    ) -> Result<(State, Cost), RecipeError> {
         self.primitive_inner(a, st, ch).map_err(|e| match e {
             PrimErr::Craft(c) => self.err(a, format!("{}: {}", Self::op_name(&a.op), c.0)),
             PrimErr::Recipe(r) => r,
@@ -286,42 +358,100 @@ impl<'a> Engine<'a> {
 
     fn need_item<'s>(&self, a: &Act, st: &'s State) -> Result<&'s Item, PrimErr> {
         st.item.as_ref().ok_or_else(|| {
-            PrimErr::Recipe(self.err(a, format!("'{}' needs a current item; start with 'buy' (or 'take <name>').", Self::op_name(&a.op))))
+            PrimErr::Recipe(self.err(
+                a,
+                format!(
+                    "'{}' needs a current item; start with 'buy' (or 'take <name>').",
+                    Self::op_name(&a.op)
+                ),
+            ))
         })
     }
 
-    fn primitive_inner(&self, a: &Act, st: &State, ch: &mut dyn Chooser) -> Result<(State, Cost), PrimErr> {
+    fn primitive_inner(
+        &self,
+        a: &Act,
+        st: &State,
+        ch: &mut dyn Chooser,
+    ) -> Result<(State, Cost), PrimErr> {
         let m = &self.mech;
         let gd = self.gd;
-        let item_state = |it: Item| State { item: Some(it), ..st.clone() };
+        let item_state = |it: Item| State {
+            item: Some(it),
+            ..st.clone()
+        };
         match &a.op {
             Op::Buy(b) => return self.buy(a, b, st).map_err(PrimErr::Recipe),
             Op::Pay(c) => return Ok((st.clone(), self.cost_owned(c))),
             Op::Fail(msg) => {
-                let msg = if msg.is_empty() { format!("fail at line {}", a.line) } else { msg.clone() };
-                return Ok((State { status: Status::Fail, msg: Arc::from(msg.as_str()), ..st.clone() }, vec![]));
+                let msg = if msg.is_empty() {
+                    format!("fail at line {}", a.line)
+                } else {
+                    msg.clone()
+                };
+                return Ok((
+                    State {
+                        status: Status::Fail,
+                        msg: Arc::from(msg.as_str()),
+                        ..st.clone()
+                    },
+                    vec![],
+                ));
             }
-            Op::Succeed(msg) => return Ok((State { status: Status::Ok, msg: Arc::from(msg.as_str()), ..st.clone() }, vec![])),
+            Op::Succeed(msg) => {
+                return Ok((
+                    State {
+                        status: Status::Ok,
+                        msg: Arc::from(msg.as_str()),
+                        ..st.clone()
+                    },
+                    vec![],
+                ))
+            }
             Op::Show(_) => return Ok((st.clone(), vec![])),
             Op::SetAside(name) => {
                 let it = self.need_item(a, st)?.clone();
                 if st.get_aside(name).is_some() {
-                    return Err(PrimErr::Recipe(self.err(a, format!("an item named '{name}' is already set aside"))));
+                    return Err(PrimErr::Recipe(
+                        self.err(a, format!("an item named '{name}' is already set aside")),
+                    ));
                 }
                 let mut aside = st.aside.clone();
                 aside.push((Arc::from(name.as_str()), it, st.value));
                 aside.sort_by(|x, y| x.0.cmp(&y.0));
-                return Ok((State { item: None, aside, value: F64::default(), ..st.clone() }, vec![]));
+                return Ok((
+                    State {
+                        item: None,
+                        aside,
+                        value: F64::default(),
+                        ..st.clone()
+                    },
+                    vec![],
+                ));
             }
             Op::Take(name) => {
                 let Some((it, v)) = st.get_aside(name) else {
-                    return Err(PrimErr::Recipe(self.err(a, format!("no set-aside item named '{name}' (set_aside it first)"))));
+                    return Err(PrimErr::Recipe(self.err(
+                        a,
+                        format!("no set-aside item named '{name}' (set_aside it first)"),
+                    )));
                 };
                 if st.item.is_some() {
-                    return Err(PrimErr::Recipe(self.err(a, "'take' needs the current item to be set aside first (set_aside <name>)")));
+                    return Err(PrimErr::Recipe(self.err(
+                        a,
+                        "'take' needs the current item to be set aside first (set_aside <name>)",
+                    )));
                 }
                 let it = it.clone();
-                return Ok((State { item: Some(it), aside: st.without_aside(name), value: F64::new(v), ..st.clone() }, vec![]));
+                return Ok((
+                    State {
+                        item: Some(it),
+                        aside: st.without_aside(name),
+                        value: F64::new(v),
+                        ..st.clone()
+                    },
+                    vec![],
+                ));
             }
             _ => {}
         }
@@ -343,22 +473,43 @@ impl<'a> Engine<'a> {
                     "veiled_exalt" => (m.veiled_exalt(item, ch)?, "veiled_exalt"),
                     "scour" => (m.scour(item, ch)?, "scour"),
                     "remove_crafted" => return Ok((item_state(m.remove_crafted(item)), vec![])),
-                    other => return Err(PrimErr::Recipe(self.err(a, format!("unknown action {other}")))),
+                    other => {
+                        return Err(PrimErr::Recipe(
+                            self.err(a, format!("unknown action {other}")),
+                        ))
+                    }
                 };
                 (item_state(it), one(key))
             }
             Op::FoulbornExalt(side) => {
-                let g = side.as_deref().map(|s| if s == "prefix" { Gen::Prefix } else { Gen::Suffix });
-                (item_state(m.foulborn_exalt(item, ch, g)?), one("foulborn_exalt"))
+                let g = side.as_deref().map(|s| {
+                    if s == "prefix" {
+                        Gen::Prefix
+                    } else {
+                        Gen::Suffix
+                    }
+                });
+                (
+                    item_state(m.foulborn_exalt(item, ch, g)?),
+                    one("foulborn_exalt"),
+                )
             }
             Op::Conqueror(inf) => {
-                let i = Influence::parse(inf).ok_or_else(|| PrimErr::Recipe(self.err(a, format!("unknown influence {inf}"))))?;
-                (item_state(m.conqueror_exalt(item, ch, i)?), one(&format!("{inf}_exalt")))
+                let i = Influence::parse(inf).ok_or_else(|| {
+                    PrimErr::Recipe(self.err(a, format!("unknown influence {inf}")))
+                })?;
+                (
+                    item_state(m.conqueror_exalt(item, ch, i)?),
+                    one(&format!("{inf}_exalt")),
+                )
             }
             Op::Unveil(prefs) => {
                 let mut fams = Vec::new();
                 for p in prefs {
-                    fams.push(self.resolve(p.s(), Some(item), a.line, &a.file).map_err(PrimErr::Recipe)?);
+                    fams.push(
+                        self.resolve(p.s(), Some(item), a.line, &a.file)
+                            .map_err(PrimErr::Recipe)?,
+                    );
                 }
                 (item_state(m.unveil(item, ch, &fams)?), vec![])
             }
@@ -370,13 +521,24 @@ impl<'a> Engine<'a> {
                     )));
                 };
                 let new = m.awaken(item, d, ch)?;
-                (State { item: Some(new), aside: st.without_aside(donor), value: F64::new(st.value.get() + dv), ..st.clone() }, one("awakener"))
+                (
+                    State {
+                        item: Some(new),
+                        aside: st.without_aside(donor),
+                        value: F64::new(st.value.get() + dv),
+                        ..st.clone()
+                    },
+                    one("awakener"),
+                )
             }
             Op::HarvestReforge(tag) => {
                 let res = m.harvest_reforge(item, ch, tag)?;
                 if tag == "influence" {
                     let (key, n) = crate::mechanics::HARVEST_REFORGE_INFLUENCE;
-                    (item_state(res), self.cost_of(&[(key, n), ("lifeforce_sacred", 1.0)]))
+                    (
+                        item_state(res),
+                        self.cost_of(&[(key, n), ("lifeforce_sacred", 1.0)]),
+                    )
                 } else {
                     let (key, n) = harvest_cost(tag).unwrap();
                     (item_state(res), self.cost_of(&[(key, n)]))
@@ -385,7 +547,10 @@ impl<'a> Engine<'a> {
             Op::HarvestAdd(tag) => {
                 let res = m.harvest_add(item, ch, tag)?;
                 let (key, n) = crate::mechanics::harvest_add_cost(tag).unwrap();
-                (item_state(res), self.cost_of(&[(key, n), ("lifeforce_sacred", 1.0)]))
+                (
+                    item_state(res),
+                    self.cost_of(&[(key, n), ("lifeforce_sacred", 1.0)]),
+                )
             }
             Op::Essence(name) => {
                 let e = self.essence_idx(a, name.s()).map_err(PrimErr::Recipe)?;
@@ -404,18 +569,30 @@ impl<'a> Engine<'a> {
                 }
                 return Err(PrimErr::Craft(last.unwrap()));
             }
-            Op::Beastcraft { what, influence } => return self.beast(a, st, item, ch, what, influence.as_deref()),
+            Op::Beastcraft { what, influence } => {
+                return self.beast(a, st, item, ch, what, influence.as_deref())
+            }
             Op::Omen(what) => {
                 if what != "blanching" {
-                    return Err(PrimErr::Recipe(self.err(a, format!("unknown omen '{what}' (supported: blanching)"))));
+                    return Err(PrimErr::Recipe(
+                        self.err(a, format!("unknown omen '{what}' (supported: blanching)")),
+                    ));
                 }
-                (item_state(m.omen_blanching(item)), self.cost_of(&[("omen_blanching", 1.0), ("chromatic", 1.0)]))
+                (
+                    item_state(m.omen_blanching(item)),
+                    self.cost_of(&[("omen_blanching", 1.0), ("chromatic", 1.0)]),
+                )
             }
             _ => unreachable!(),
         })
     }
 
-    fn buy(&self, a: &Act, b: &crate::lang::BuyArgs, st: &State) -> Result<(State, Cost), RecipeError> {
+    fn buy(
+        &self,
+        a: &Act,
+        b: &crate::lang::BuyArgs,
+        st: &State,
+    ) -> Result<(State, Cost), RecipeError> {
         let gd = self.gd;
         let base = gd.resolve_base(&b.base).map_err(|e| self.err(a, e.0))?;
         let mut infl = Influences::default();
@@ -430,64 +607,136 @@ impl<'a> Engine<'a> {
         let mut mods: Vec<Roll> = Vec::new();
         for w in &b.with {
             let e = |msg: String| RecipeError::new(msg, Some(w.line), a.file.clone());
-            let fam_i = gd.resolve_mod(w.r.s(), Some(gd.item_class(base))).map_err(|x| e(x.0))?;
+            let fam_i = gd
+                .resolve_mod(w.r.s(), Some(gd.item_class(base)))
+                .map_err(|x| e(x.0))?;
             let fam = &gd.families[fam_i as usize];
             let tiers = gd.tiers_for(fam_i, base);
             let r = w.r.s();
             let mi = if w.elevated {
-                fam.elevated.ok_or_else(|| e(format!("\"{r}\" has no elevated version")))?
+                fam.elevated
+                    .ok_or_else(|| e(format!("\"{r}\" has no elevated version")))?
             } else if let Some(t) = w.tier {
                 if t < 1 || t as usize > tiers.len() {
-                    let lv: Vec<String> = tiers.iter().enumerate().map(|(i, m)| format!("T{}=ilvl{}", i + 1, gd.m(*m).level)).collect();
-                    return Err(e(format!("\"{r}\" has tiers 1..{} on this base (asked for tier {t}); levels: {}", tiers.len(), lv.join(", "))));
+                    let lv: Vec<String> = tiers
+                        .iter()
+                        .enumerate()
+                        .map(|(i, m)| format!("T{}=ilvl{}", i + 1, gd.m(*m).level))
+                        .collect();
+                    return Err(e(format!(
+                        "\"{r}\" has tiers 1..{} on this base (asked for tier {t}); levels: {}",
+                        tiers.len(),
+                        lv.join(", ")
+                    )));
                 }
                 tiers[t as usize - 1]
             } else {
                 match tiers.iter().find(|&&m| gd.m(m).level <= item.ilvl) {
                     Some(&m) => m,
-                    None if tiers.is_empty() => return Err(e(format!("\"{r}\" cannot roll on {}", gd.base(base).name))),
-                    None => return Err(e(format!("\"{r}\" needs item level {}+", gd.m(*tiers.last().unwrap()).level))),
+                    None if tiers.is_empty() => {
+                        return Err(e(format!("\"{r}\" cannot roll on {}", gd.base(base).name)))
+                    }
+                    None => {
+                        return Err(e(format!(
+                            "\"{r}\" needs item level {}+",
+                            gd.m(*tiers.last().unwrap()).level
+                        )))
+                    }
                 }
             };
             let m = gd.m(mi);
             if let Some(inf) = m.influence {
                 if !item.influences.contains(inf) {
-                    return Err(e(format!("\"{r}\" is a {} mod; add \"influence {}\" to the buy", crate::data::title(inf.name()), inf.name())));
+                    return Err(e(format!(
+                        "\"{r}\" is a {} mod; add \"influence {}\" to the buy",
+                        crate::data::title(inf.name()),
+                        inf.name()
+                    )));
                 }
             }
             if !m.elevated && m.level > item.ilvl {
-                return Err(e(format!("\"{}\" (tier {}) needs item level {}, item is {}", m.short(), gd.tier(mi, base), m.level, item.ilvl)));
+                return Err(e(format!(
+                    "\"{}\" (tier {}) needs item level {}, item is {}",
+                    m.short(),
+                    gd.tier(mi, base),
+                    m.level,
+                    item.ilvl
+                )));
             }
-            if mods.iter().any(|x| gd.m(x.m).group_ids.iter().any(|g| m.group_ids.contains(g))) {
-                return Err(e(format!("two mods of the same group ({}) on one item", m.groups.first().cloned().unwrap_or_default())));
+            if mods
+                .iter()
+                .any(|x| gd.m(x.m).group_ids.iter().any(|g| m.group_ids.contains(g)))
+            {
+                return Err(e(format!(
+                    "two mods of the same group ({}) on one item",
+                    m.groups.first().cloned().unwrap_or_default()
+                )));
             }
-            mods.push(Roll { m: mi, fractured: w.fractured, crafted: false });
+            mods.push(Roll {
+                m: mi,
+                fractured: w.fractured,
+                crafted: false,
+            });
         }
         let item = item.with_mods(mods);
         let mx = item.max_affixes(gd);
         if item.n_side(gd, Gen::Prefix) > mx || item.n_side(gd, Gen::Suffix) > mx {
-            return Err(self.err(a, format!("a {} item can have at most {mx} prefix(es) and {mx} suffix(es)", item.rarity.name())));
+            return Err(self.err(
+                a,
+                format!(
+                    "a {} item can have at most {mx} prefix(es) and {mx} suffix(es)",
+                    item.rarity.name()
+                ),
+            ));
         }
         let mut cost = self.cost_owned(&b.cost);
         let value = self.chaos(&cost);
         if st.item.is_some() && st.value.get() != 0.0 {
             cost.push((self.cur(LOST), st.value.get()));
         }
-        let imprint = if st.item.is_some() { None } else { st.imprint.clone() };
-        Ok((State { item: Some(item), value: F64::new(value), imprint, ..st.clone() }, cost))
+        let imprint = if st.item.is_some() {
+            None
+        } else {
+            st.imprint.clone()
+        };
+        Ok((
+            State {
+                item: Some(item),
+                value: F64::new(value),
+                imprint,
+                ..st.clone()
+            },
+            cost,
+        ))
     }
 
     fn essence_idx(&self, a: &Act, name: &str) -> Result<usize, RecipeError> {
         let low = name.to_lowercase();
         let ess = &self.gd.essences;
-        let mut hits: Vec<usize> = (0..ess.len()).filter(|&i| ess[i].name.to_lowercase() == low).collect();
+        let mut hits: Vec<usize> = (0..ess.len())
+            .filter(|&i| ess[i].name.to_lowercase() == low)
+            .collect();
         if hits.is_empty() {
-            hits = (0..ess.len()).filter(|&i| ess[i].name.to_lowercase().contains(&low)).collect();
+            hits = (0..ess.len())
+                .filter(|&i| ess[i].name.to_lowercase().contains(&low))
+                .collect();
         }
         if hits.len() != 1 {
             let mut names: Vec<&str> = hits.iter().map(|&i| ess[i].name.as_str()).collect();
             names.sort();
-            let tail = if hits.is_empty() { "not found".to_string() } else { format!("is ambiguous: {}", names.iter().take(12).cloned().collect::<Vec<_>>().join(", ")) };
+            let tail = if hits.is_empty() {
+                "not found".to_string()
+            } else {
+                format!(
+                    "is ambiguous: {}",
+                    names
+                        .iter()
+                        .take(12)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            };
             return Err(self.err(a, format!("essence \"{name}\" {tail}")));
         }
         Ok(hits[0])
@@ -502,7 +751,12 @@ impl<'a> Engine<'a> {
     ];
 
     /// Bench option for `what` on this item's class: builtin name, alias, mod id or text.
-    fn bench(&self, a: &Act, item: &Item, what: &str) -> Result<(u32, Vec<(String, f64)>), RecipeError> {
+    fn bench(
+        &self,
+        a: &Act,
+        item: &Item,
+        what: &str,
+    ) -> Result<(u32, Vec<(String, f64)>), RecipeError> {
         let gd = self.gd;
         let cls = gd.item_class(item.base);
         let extra: [(&str, MetaKind); 6] = [
@@ -513,37 +767,106 @@ impl<'a> Engine<'a> {
             ("no_attack_mods", MetaKind::NoAttackMods),
             ("no_caster_mods", MetaKind::NoCasterMods),
         ];
-        if let Some((_, kind)) = Self::BENCH_BUILTINS.iter().chain(extra.iter()).find(|x| x.0 == what) {
-            let opt = gd.metamod_for(cls, *kind).ok_or_else(|| self.err(a, format!("bench craft {what} not available on {cls}")))?;
-            return Ok((opt.module, opt.cost.iter().map(|(k, v)| (k.clone(), *v)).collect()));
+        if let Some((_, kind)) = Self::BENCH_BUILTINS
+            .iter()
+            .chain(extra.iter())
+            .find(|x| x.0 == what)
+        {
+            let opt = gd
+                .metamod_for(cls, *kind)
+                .ok_or_else(|| self.err(a, format!("bench craft {what} not available on {cls}")))?;
+            return Ok((
+                opt.module,
+                opt.cost.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+            ));
         }
-        let low = gd.aliases.get(&what.to_lowercase()).cloned().unwrap_or_else(|| what.to_string()).to_lowercase();
+        let low = gd
+            .aliases
+            .get(&what.to_lowercase())
+            .cloned()
+            .unwrap_or_else(|| what.to_string())
+            .to_lowercase();
         let hits: Vec<&crate::data::BenchOption> = gd
             .bench
             .iter()
             .filter(|b| b.classes.iter().any(|c| c == cls))
-            .filter(|b| gd.m(b.module).text.to_lowercase().contains(&low) || gd.m(b.module).id.to_lowercase() == low)
+            .filter(|b| {
+                gd.m(b.module).text.to_lowercase().contains(&low)
+                    || gd.m(b.module).id.to_lowercase() == low
+            })
             .collect();
         if hits.is_empty() {
-            let names: Vec<&str> = Self::BENCH_BUILTINS.iter().map(|x| x.0).chain(extra.iter().map(|x| x.0)).collect();
-            return Err(self.err(a, format!("no bench craft matching \"{what}\" for {cls}. Builtins: {}", names.join(", "))));
+            let names: Vec<&str> = Self::BENCH_BUILTINS
+                .iter()
+                .map(|x| x.0)
+                .chain(extra.iter().map(|x| x.0))
+                .collect();
+            return Err(self.err(
+                a,
+                format!(
+                    "no bench craft matching \"{what}\" for {cls}. Builtins: {}",
+                    names.join(", ")
+                ),
+            ));
         }
-        let groups: std::collections::BTreeSet<&str> = hits.iter().map(|b| gd.m(b.module).groups.first().map(|s| s.as_str()).unwrap_or("")).collect();
+        let groups: std::collections::BTreeSet<&str> = hits
+            .iter()
+            .map(|b| {
+                gd.m(b.module)
+                    .groups
+                    .first()
+                    .map(|s| s.as_str())
+                    .unwrap_or("")
+            })
+            .collect();
         if groups.len() > 1 {
             let mut t: Vec<String> = hits.iter().map(|b| gd.m(b.module).short()).collect();
             t.sort();
             t.dedup();
             let s = t.join("; ");
-            return Err(self.err(a, format!("bench craft \"{what}\" is ambiguous: {}", &s[..s.len().min(400)])));
+            return Err(self.err(
+                a,
+                format!(
+                    "bench craft \"{what}\" is ambiguous: {}",
+                    &s[..s.len().min(400)]
+                ),
+            ));
         }
-        let best = hits.iter().max_by(|x, y| gd.m(x.module).level.cmp(&gd.m(y.module).level).then(gd.m(x.module).id.cmp(&gd.m(y.module).id))).unwrap();
-        Ok((best.module, best.cost.iter().map(|(k, v)| (k.clone(), *v)).collect()))
+        let best = hits
+            .iter()
+            .max_by(|x, y| {
+                gd.m(x.module)
+                    .level
+                    .cmp(&gd.m(y.module).level)
+                    .then(gd.m(x.module).id.cmp(&gd.m(y.module).id))
+            })
+            .unwrap();
+        Ok((
+            best.module,
+            best.cost.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+        ))
     }
 
-    fn beast(&self, a: &Act, st: &State, item: &Item, ch: &mut dyn Chooser, what: &str, influence: Option<&str>) -> Result<(State, Cost), PrimErr> {
+    fn beast(
+        &self,
+        a: &Act,
+        st: &State,
+        item: &Item,
+        ch: &mut dyn Chooser,
+        what: &str,
+        influence: Option<&str>,
+    ) -> Result<(State, Cost), PrimErr> {
         let m = &self.mech;
-        let bc = |n: &str| -> Cost { beast_cost(n).iter().map(|(k, v)| (self.cur(k), *v)).collect() };
-        let item_state = |it: Item| State { item: Some(it), ..st.clone() };
+        let bc = |n: &str| -> Cost {
+            beast_cost(n)
+                .iter()
+                .map(|(k, v)| (self.cur(k), *v))
+                .collect()
+        };
+        let item_state = |it: Item| State {
+            item: Some(it),
+            ..st.clone()
+        };
         Ok(match what {
             "lock_suffixes" | "lock_prefixes" | "multimod" => {
                 let kind = match what {
@@ -593,21 +916,32 @@ impl<'a> Engine<'a> {
     // -------------------------------------------------------------- i.i.d. loops
     /// A loop whose body is one "full reroll" action (alteration, chaos, unlocked harvest
     /// reforge) is a sequence of independent identical trials, solved in closed form.
-    pub(crate) fn iid_loop(&self, l: &crate::lang::Loop, st: &State) -> Result<Option<Rc<Iid>>, RecipeError> {
-        let [Node::Act(act)] = l.body.body.as_slice() else { return Ok(None) };
+    pub(crate) fn iid_loop(
+        &self,
+        l: &crate::lang::Loop,
+        st: &State,
+    ) -> Result<Option<Rc<Iid>>, RecipeError> {
+        let [Node::Act(act)] = l.body.body.as_slice() else {
+            return Ok(None);
+        };
         let op = match &act.op {
             Op::Simple(s) if *s == "alteration" || *s == "chaos" => *s,
             Op::HarvestReforge(_) => "harvest_reforge",
             _ => return Ok(None),
         };
-        let Some(item) = &st.item else { return Ok(None) };
+        let Some(item) = &st.item else {
+            return Ok(None);
+        };
         let gd = self.gd;
         match op {
             "alteration" if item.rarity != Rarity::Magic => return Ok(None),
             "chaos" | "harvest_reforge" if item.rarity != Rarity::Rare => return Ok(None),
             _ => {}
         }
-        let locked = [Gen::Prefix, Gen::Suffix].iter().map(|g| item.lock_on(gd, *g)).collect::<Vec<_>>();
+        let locked = [Gen::Prefix, Gen::Suffix]
+            .iter()
+            .map(|g| item.lock_on(gd, *g))
+            .collect::<Vec<_>>();
         if op == "harvest_reforge" && locked.iter().any(|l| *l != Lock::None) {
             return Ok(None); // the reforge consumes the lock: later iterations differ
         }
@@ -619,7 +953,12 @@ impl<'a> Engine<'a> {
         } else {
             let mut dummy = RandomChooser::new(0);
             let prot = self.mech.protected(item, &mut dummy);
-            item.mods.iter().zip(prot).filter(|(_, p)| *p).map(|(r, _)| *r).collect()
+            item.mods
+                .iter()
+                .zip(prot)
+                .filter(|(_, p)| *p)
+                .map(|(r, _)| *r)
+                .collect()
         };
         let key = IidKey {
             act: act as *const Act as usize,
@@ -673,18 +1012,37 @@ impl<'a> Engine<'a> {
             }
         }
         let p: f64 = succ.values().sum();
-        let iid = Rc::new(Iid { succ: succ.into_iter().collect(), fail: fail.into_iter().collect(), p, cost });
+        let iid = Rc::new(Iid {
+            succ: succ.into_iter().collect(),
+            fail: fail.into_iter().collect(),
+            p,
+            cost,
+        });
         self.iid_cache.borrow_mut().insert(key, Some(iid.clone()));
         Ok(Some(iid))
     }
 
     // -------------------------------------------------------------- Monte Carlo
     /// Run the recipe once with random choices.
-    pub fn run_mc(&self, prog: &Program, seed: u64, max_steps: u64, mut trace: Option<&mut Vec<String>>) -> Result<RunResult, RecipeError> {
+    pub fn run_mc(
+        &self,
+        prog: &Program,
+        seed: u64,
+        max_steps: u64,
+        mut trace: Option<&mut Vec<String>>,
+    ) -> Result<RunResult, RecipeError> {
         let mut ch = RandomChooser::new(seed);
         let mut costs: Vec<f64> = vec![];
         let mut steps = 0u64;
-        let st = self.mc_seq(&prog.body, State::default(), &mut ch, &mut costs, &mut steps, max_steps, &mut trace)?;
+        let st = self.mc_seq(
+            &prog.body,
+            State::default(),
+            &mut ch,
+            &mut costs,
+            &mut steps,
+            max_steps,
+            &mut trace,
+        )?;
         self.finish(prog, st, costs, steps)
     }
 
@@ -699,7 +1057,16 @@ impl<'a> Engine<'a> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn mc_seq(&self, s: &Seq, mut st: State, ch: &mut RandomChooser, costs: &mut Vec<f64>, steps: &mut u64, max: u64, trace: &mut Option<&mut Vec<String>>) -> Result<State, RecipeError> {
+    fn mc_seq(
+        &self,
+        s: &Seq,
+        mut st: State,
+        ch: &mut RandomChooser,
+        costs: &mut Vec<f64>,
+        steps: &mut u64,
+        max: u64,
+        trace: &mut Option<&mut Vec<String>>,
+    ) -> Result<State, RecipeError> {
         for n in &s.body {
             if st.status != Status::Run {
                 break;
@@ -710,7 +1077,16 @@ impl<'a> Engine<'a> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn mc_node(&self, n: &Node, st: State, ch: &mut RandomChooser, costs: &mut Vec<f64>, steps: &mut u64, max: u64, trace: &mut Option<&mut Vec<String>>) -> Result<State, RecipeError> {
+    fn mc_node(
+        &self,
+        n: &Node,
+        st: State,
+        ch: &mut RandomChooser,
+        costs: &mut Vec<f64>,
+        steps: &mut u64,
+        max: u64,
+        trace: &mut Option<&mut Vec<String>>,
+    ) -> Result<State, RecipeError> {
         if st.status != Status::Run {
             return Ok(st);
         }
@@ -727,8 +1103,18 @@ impl<'a> Engine<'a> {
                 let (st2, c) = self.primitive(a, &st, ch)?;
                 Self::add_cost(costs, &c, 1.0);
                 if let (Some(t), Op::Show(msg)) = (trace.as_deref_mut(), &a.op) {
-                    let label = if msg.is_empty() { format!("line {}", a.line) } else { msg.clone() };
-                    t.push(format!("{label}\n{}", st.item.as_ref().map(|i| i.describe(self.gd)).unwrap_or_else(|| "(no item)".into())));
+                    let label = if msg.is_empty() {
+                        format!("line {}", a.line)
+                    } else {
+                        msg.clone()
+                    };
+                    t.push(format!(
+                        "{label}\n{}",
+                        st.item
+                            .as_ref()
+                            .map(|i| i.describe(self.gd))
+                            .unwrap_or_else(|| "(no item)".into())
+                    ));
                 }
                 Ok(st2)
             }
@@ -773,7 +1159,10 @@ impl<'a> Engine<'a> {
                     Self::add_cost(costs, &c, 1.0);
                     return Ok(st2);
                 }
-                let st = st.with_item(Item { preview_lock: false, ..it.clone() });
+                let st = st.with_item(Item {
+                    preview_lock: false,
+                    ..it.clone()
+                });
                 match &f.other {
                     Some(o) => self.mc_seq(o, st, ch, costs, steps, max, trace),
                     None => Ok(st),
@@ -783,9 +1172,20 @@ impl<'a> Engine<'a> {
         }
     }
 
-    fn mc_iid(&self, l: &crate::lang::Loop, st: State, iid: &Iid, ch: &mut RandomChooser, costs: &mut Vec<f64>) -> Result<State, RecipeError> {
+    fn mc_iid(
+        &self,
+        l: &crate::lang::Loop,
+        st: State,
+        iid: &Iid,
+        ch: &mut RandomChooser,
+        costs: &mut Vec<f64>,
+    ) -> Result<State, RecipeError> {
         if iid.p <= 0.0 && l.limit.is_none() {
-            return Err(RecipeError::new("this loop can never finish: its exit condition cannot be reached by this action", Some(l.line), l.file.clone()));
+            return Err(RecipeError::new(
+                "this loop can never finish: its exit condition cannot be reached by this action",
+                Some(l.line),
+                l.file.clone(),
+            ));
         }
         let n: f64 = if iid.p >= 1.0 {
             1.0
@@ -815,14 +1215,25 @@ impl<'a> Engine<'a> {
         Ok(st.with_item(pick.clone()))
     }
 
-    fn finish(&self, prog: &Program, st: State, costs: Vec<f64>, steps: u64) -> Result<RunResult, RecipeError> {
+    fn finish(
+        &self,
+        prog: &Program,
+        st: State,
+        costs: Vec<f64>,
+        steps: u64,
+    ) -> Result<RunResult, RecipeError> {
         let mut ok = st.status != Status::Fail;
         if ok {
             if let Some(g) = &prog.goal {
                 ok = st.item.is_some() && self.cond(g, &st, 0, &None)?;
             }
         }
-        let mut costs: Vec<(String, f64)> = costs.iter().enumerate().filter(|(_, v)| **v != 0.0).map(|(i, v)| (self.cur_name(i as Cur), *v)).collect();
+        let mut costs: Vec<(String, f64)> = costs
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| **v != 0.0)
+            .map(|(i, v)| (self.cur_name(i as Cur), *v))
+            .collect();
         if !ok && st.value.get() != 0.0 {
             match costs.iter_mut().find(|x| x.0 == LOST) {
                 Some(x) => x.1 += st.value.get(),
@@ -831,10 +1242,21 @@ impl<'a> Engine<'a> {
         }
         let mut tracks = vec![];
         for (lbl, c) in &prog.tracks {
-            tracks.push((lbl.clone(), st.item.is_some() && self.cond(c, &st, 0, &None)?));
+            tracks.push((
+                lbl.clone(),
+                st.item.is_some() && self.cond(c, &st, 0, &None)?,
+            ));
         }
         let revenue = self.revenue(prog, &st)?;
-        Ok(RunResult { success: ok, costs, msg: st.msg.to_string(), item: st.item, steps, tracks, revenue })
+        Ok(RunResult {
+            success: ok,
+            costs,
+            msg: st.msg.to_string(),
+            item: st.item,
+            steps,
+            tracks,
+            revenue,
+        })
     }
 
     /// Chaos value of the final item from the recipe's `sell` lines (first match wins).

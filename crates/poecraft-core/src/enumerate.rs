@@ -16,7 +16,11 @@ struct Replay<'p> {
 impl Replay<'_> {
     fn pick(&mut self, probs: Vec<f64>) -> usize {
         let pos = self.trail.len();
-        let i = if pos < self.prefix.len() { self.prefix[pos] } else { 0 };
+        let i = if pos < self.prefix.len() {
+            self.prefix[pos]
+        } else {
+            0
+        };
         self.trail.push((i, probs));
         i
     }
@@ -35,10 +39,17 @@ impl Chooser for Replay<'_> {
 /// Call `f` once per outcome path; `visit(result, probability)` receives each and returns
 /// false to stop early. Returns Err(TooLarge) when more than `budget` paths would be needed
 /// or the visitor stopped.
-pub fn enumerate<R>(mut f: impl FnMut(&mut dyn Chooser) -> R, budget: &mut u64, mut visit: impl FnMut(R, f64) -> bool) -> Result<(), TooLarge> {
+pub fn enumerate<R>(
+    mut f: impl FnMut(&mut dyn Chooser) -> R,
+    budget: &mut u64,
+    mut visit: impl FnMut(R, f64) -> bool,
+) -> Result<(), TooLarge> {
     let mut prefix: Vec<usize> = Vec::new();
     loop {
-        let mut ch = Replay { prefix: &prefix, trail: Vec::new() };
+        let mut ch = Replay {
+            prefix: &prefix,
+            trail: Vec::new(),
+        };
         let r = f(&mut ch);
         let p: f64 = ch.trail.iter().map(|(i, probs)| probs[*i]).product();
         if !visit(r, p) || *budget == 0 {

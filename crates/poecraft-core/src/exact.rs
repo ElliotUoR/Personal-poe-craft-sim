@@ -56,7 +56,14 @@ fn acc(d: &mut Dist, s: State, p: f64, s1: &[f64], s2: f64) {
 
 fn point(s: State) -> Dist {
     let mut d = Dist::default();
-    d.insert(s, Entry { p: 1.0, s1: vec![], s2: 0.0 });
+    d.insert(
+        s,
+        Entry {
+            p: 1.0,
+            s1: vec![],
+            s2: 0.0,
+        },
+    );
     d
 }
 
@@ -100,16 +107,33 @@ pub struct ExactResult {
 
 impl<'e, 'a> Exact<'e, 'a> {
     pub fn new(eng: &'e Engine<'a>, budget: Budget) -> Self {
-        Exact { eng, cache: FxHashMap::default(), loop_cache: FxHashMap::default(), shared: FxHashSet::default(), budget }
+        Exact {
+            eng,
+            cache: FxHashMap::default(),
+            loop_cache: FxHashMap::default(),
+            shared: FxHashSet::default(),
+            budget,
+        }
     }
 
     fn chaos(&self, v: &[f64]) -> f64 {
-        v.iter().enumerate().map(|(c, n)| if *n != 0.0 { self.eng.price(c as Cur) * n } else { 0.0 }).sum()
+        v.iter()
+            .enumerate()
+            .map(|(c, n)| {
+                if *n != 0.0 {
+                    self.eng.price(c as Cur) * n
+                } else {
+                    0.0
+                }
+            })
+            .sum()
     }
 
     fn check_time(&self) -> XResult<()> {
         if Instant::now() > self.budget.deadline {
-            return Err(ExactErr::TooLarge("exact computation exceeded its time budget".into()));
+            return Err(ExactErr::TooLarge(
+                "exact computation exceeded its time budget".into(),
+            ));
         }
         Ok(())
     }
@@ -152,9 +176,23 @@ impl<'e, 'a> Exact<'e, 'a> {
             res.revenue += e.p * eng.revenue(prog, st)?;
         }
         res.n_outcomes = out.len();
-        res.mean_chaos = counts.iter().enumerate().map(|(c, n)| eng.price(c as Cur) * n).sum();
-        res.mean_counts = counts.iter().enumerate().filter(|(_, v)| **v != 0.0).map(|(c, v)| (eng.cur_name(c as Cur), *v)).collect();
-        res.tracks = prog.tracks.iter().map(|(l, _)| l.clone()).zip(tracks).collect();
+        res.mean_chaos = counts
+            .iter()
+            .enumerate()
+            .map(|(c, n)| eng.price(c as Cur) * n)
+            .sum();
+        res.mean_counts = counts
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| **v != 0.0)
+            .map(|(c, v)| (eng.cur_name(c as Cur), *v))
+            .collect();
+        res.tracks = prog
+            .tracks
+            .iter()
+            .map(|(l, _)| l.clone())
+            .zip(tracks)
+            .collect();
         Ok(res)
     }
 
@@ -200,10 +238,18 @@ impl<'e, 'a> Exact<'e, 'a> {
             Node::Foresee(f) => {
                 let locked = st.item.as_ref().is_some_and(|i| i.preview_lock);
                 if !locked {
-                    return Err(RecipeError::new("'foresee' needs an item with Hinekora's Lock", Some(f.line), f.file.clone()).into());
+                    return Err(RecipeError::new(
+                        "'foresee' needs an item with Hinekora's Lock",
+                        Some(f.line),
+                        f.file.clone(),
+                    )
+                    .into());
                 }
                 let outs = self.primitive(&f.action, &st)?;
-                let unlocked = st.with_item(crate::item::Item { preview_lock: false, ..st.item.clone().unwrap() });
+                let unlocked = st.with_item(crate::item::Item {
+                    preview_lock: false,
+                    ..st.item.clone().unwrap()
+                });
                 let other = match &f.other {
                     Some(o) => self.seq(o, unlocked)?,
                     None => Rc::new(point(unlocked)),
@@ -242,7 +288,13 @@ impl<'e, 'a> Exact<'e, 'a> {
                     s1[i] += x.p * v;
                 }
                 let y1c = self.chaos(&y.s1);
-                acc(&mut out, t.clone(), x.p * y.p, &s1, x.s2 * y.p + 2.0 * x1c * y1c + x.p * y.s2);
+                acc(
+                    &mut out,
+                    t.clone(),
+                    x.p * y.p,
+                    &s1,
+                    x.s2 * y.p + 2.0 * x1c * y1c + x.p * y.s2,
+                );
             }
         }
         Ok(out)
@@ -263,7 +315,8 @@ impl<'e, 'a> Exact<'e, 'a> {
                 n += 1;
                 match res {
                     Ok((s, c)) => {
-                        let mut c: Vec<(Cur, u64)> = c.iter().map(|(k, v)| (*k, v.to_bits())).collect();
+                        let mut c: Vec<(Cur, u64)> =
+                            c.iter().map(|(k, v)| (*k, v.to_bits())).collect();
                         c.sort_unstable();
                         *raw.entry((s, c)).or_insert(0.0) += p;
                         n % 4096 != 0 || Instant::now() <= deadline
@@ -279,7 +332,9 @@ impl<'e, 'a> Exact<'e, 'a> {
             return Err(e.into());
         }
         if r.is_err() {
-            return Err(ExactErr::TooLarge("too many random outcomes to enumerate exactly".into()));
+            return Err(ExactErr::TooLarge(
+                "too many random outcomes to enumerate exactly".into(),
+            ));
         }
         self.budget.paths = budget;
         let mut out = Dist::default();
@@ -336,7 +391,13 @@ impl<'e, 'a> Exact<'e, 'a> {
                 }
                 for (it, po) in &iid.succ {
                     let w = po / p;
-                    acc(&mut out, s0.with_item(it.clone()), w, &cost_vec(w / p), w * c * c * (2.0 - p) / (p * p));
+                    acc(
+                        &mut out,
+                        s0.with_item(it.clone()),
+                        w,
+                        &cost_vec(w / p),
+                        w * c * c * (2.0 - p) / (p * p),
+                    );
                 }
             }
             Some(lim) => {
@@ -349,12 +410,24 @@ impl<'e, 'a> Exact<'e, 'a> {
                 let pf = q.powi(lim as i32);
                 for (it, po) in &iid.succ {
                     let w = po / p;
-                    acc(&mut out, s0.with_item(it.clone()), w * (1.0 - pf), &cost_vec(w * en_s), w * en2_s * c * c);
+                    acc(
+                        &mut out,
+                        s0.with_item(it.clone()),
+                        w * (1.0 - pf),
+                        &cost_vec(w * en_s),
+                        w * en2_s * c * c,
+                    );
                 }
                 for (it, po) in &iid.fail {
                     let w = if q > 0.0 { po / q } else { 0.0 };
                     let l = lim as f64;
-                    acc(&mut out, s0.with_item(it.clone()), w * pf, &cost_vec(w * pf * l), w * pf * l * l * c * c);
+                    acc(
+                        &mut out,
+                        s0.with_item(it.clone()),
+                        w * pf,
+                        &cost_vec(w * pf * l),
+                        w * pf * l * l * c * c,
+                    );
                 }
             }
         }
@@ -367,10 +440,20 @@ impl<'e, 'a> Exact<'e, 'a> {
     fn signature(&mut self, seq: &Seq, st: &State) -> XResult<Sig> {
         let mut cur = st.clone();
         let mut cost: Vec<f64> = vec![];
-        let pack = |cost: &Vec<f64>| -> Vec<(usize, u64)> { cost.iter().enumerate().filter(|(_, v)| **v != 0.0).map(|(i, v)| (i, v.to_bits())).collect() };
+        let pack = |cost: &Vec<f64>| -> Vec<(usize, u64)> {
+            cost.iter()
+                .enumerate()
+                .filter(|(_, v)| **v != 0.0)
+                .map(|(i, v)| (i, v.to_bits()))
+                .collect()
+        };
         for (k, n) in seq.body.iter().enumerate() {
             if cur.status != Status::Run {
-                return Ok(Sig { k, st: SigState::State(cur), cost: pack(&cost) });
+                return Ok(Sig {
+                    k,
+                    st: SigState::State(cur),
+                    cost: pack(&cost),
+                });
             }
             let d = self.node(n, cur.clone())?;
             let ptr = Rc::as_ptr(&d) as usize;
@@ -380,8 +463,16 @@ impl<'e, 'a> Exact<'e, 'a> {
                 (e.p - 1.0).abs() <= 1e-12 && (e.s2 - c * c).abs() <= 1e-6 * (c * c).max(1.0)
             };
             if !deterministic {
-                let st = if self.shared.contains(&ptr) { SigState::Dist(ptr) } else { SigState::State(cur) };
-                return Ok(Sig { k, st, cost: pack(&cost) });
+                let st = if self.shared.contains(&ptr) {
+                    SigState::Dist(ptr)
+                } else {
+                    SigState::State(cur)
+                };
+                return Ok(Sig {
+                    k,
+                    st,
+                    cost: pack(&cost),
+                });
             }
             let (s2, e) = d.iter().next().unwrap();
             if cost.len() < e.s1.len() {
@@ -392,7 +483,11 @@ impl<'e, 'a> Exact<'e, 'a> {
             }
             cur = s2.clone();
         }
-        Ok(Sig { k: seq.body.len(), st: SigState::State(cur), cost: pack(&cost) })
+        Ok(Sig {
+            k: seq.body.len(),
+            st: SigState::State(cur),
+            cost: pack(&cost),
+        })
     }
 
     fn solve(&mut self, l: &Loop, s0: State) -> XResult<Dist> {
@@ -428,7 +523,14 @@ impl<'e, 'a> Exact<'e, 'a> {
                         absorbed_list.push(t.clone());
                         absorbed_list.len() - 1
                     });
-                    rows.push(Row { absorbed: true, target: u, q: e.p, y1: e.s1.clone(), y1c, y2: e.s2 });
+                    rows.push(Row {
+                        absorbed: true,
+                        target: u,
+                        q: e.p,
+                        y1: e.s1.clone(),
+                        y1c,
+                        y2: e.s2,
+                    });
                 } else {
                     let kk = if limit.is_some() { k + 1 } else { 0 };
                     let sig = self.signature(&l.body, t)?;
@@ -440,12 +542,22 @@ impl<'e, 'a> Exact<'e, 'a> {
                             idx.insert(key, x);
                             reps.push((t.clone(), kk));
                             if reps.len() > self.budget.states {
-                                return Err(ExactErr::TooLarge(format!("loop at line {} has more than {} states", l.line, self.budget.states)));
+                                return Err(ExactErr::TooLarge(format!(
+                                    "loop at line {} has more than {} states",
+                                    l.line, self.budget.states
+                                )));
                             }
                             x
                         }
                     };
-                    rows.push(Row { absorbed: false, target: tgt, q: e.p, y1: e.s1.clone(), y1c, y2: e.s2 });
+                    rows.push(Row {
+                        absorbed: false,
+                        target: tgt,
+                        q: e.p,
+                        y1: e.s1.clone(),
+                        y1c,
+                        y2: e.s2,
+                    });
                 }
             }
             trans.push(rows);

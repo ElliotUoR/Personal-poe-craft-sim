@@ -4,9 +4,9 @@
 //! are merged on top, in that order.
 
 use serde_json::Value;
-use std::sync::Mutex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::sync::Mutex;
 
 pub fn unit_alias(k: &str) -> &str {
     match k {
@@ -25,9 +25,14 @@ pub struct Prices {
 }
 
 impl Prices {
-    pub fn load(data_dir: &Path, overrides: &[&Path], include_local: bool) -> Result<Prices, String> {
+    pub fn load(
+        data_dir: &Path,
+        overrides: &[&Path],
+        include_local: bool,
+    ) -> Result<Prices, String> {
         let read = |p: &Path| -> Result<Value, String> {
-            let txt = std::fs::read_to_string(p).map_err(|e| format!("cannot read {}: {e}", p.display()))?;
+            let txt = std::fs::read_to_string(p)
+                .map_err(|e| format!("cannot read {}: {e}", p.display()))?;
             serde_json::from_str(&txt).map_err(|e| format!("bad price file {}: {e}", p.display()))
         };
         let base = read(&data_dir.join("prices.json"))?;
@@ -69,7 +74,10 @@ impl Prices {
     }
 
     pub fn from_table(t: BTreeMap<String, f64>) -> Prices {
-        Prices { table: t, ..Default::default() }
+        Prices {
+            table: t,
+            ..Default::default()
+        }
     }
 
     /// Chaos value of one unit of `key`. Unknown keys count as 0 and are remembered.
