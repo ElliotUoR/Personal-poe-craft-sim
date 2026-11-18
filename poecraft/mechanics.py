@@ -15,10 +15,14 @@ chooser, see exact.py).
 from __future__ import annotations
 
 import random
-from dataclasses import replace
+from dataclasses import replace as _dc_replace
 
 from .data import CONQUERORS, GameData
 from .item import METAMODS, MULTIMOD, PREFIX_LOCK, SUFFIX_LOCK, Item, Roll
+
+
+def replace(obj, **kw):
+    return obj.evolve(**kw) if isinstance(obj, Item) else _dc_replace(obj, **kw)
 
 
 class CraftError(Exception):
@@ -31,14 +35,7 @@ class RandomChooser:
         self.rng = random.Random(seed)
 
     def weighted(self, options, weights):
-        total = sum(weights)
-        x = self.rng.random() * total
-        acc = 0.0
-        for o, w in zip(options, weights):
-            acc += w
-            if x < acc:
-                return o
-        return options[-1]
+        return self.rng.choices(options, weights)[0]
 
     def uniform(self, options):
         return options[self.rng.randrange(len(options))]
@@ -116,6 +113,8 @@ _gd: GameData = None  # set by bind()
 
 def bind(gd: GameData):
     global _gd
+    if gd is not _gd:
+        _POOL_CACHE.clear()
     _gd = gd
 
 
@@ -127,8 +126,13 @@ def pool(item: Item, sides=("prefix", "suffix"), influence_only=None, tag=None, 
     tags, open prefix/suffix slots and mod-group exclusion (a mod cannot roll if a
     mod of the same group is already on the item)."""
     gd = _gd
-    present = item.groups(gd) | set(exclude_groups)
+    present = frozenset(item.groups(gd) | set(exclude_groups))
     open_ = {g: item.open_slots(gd, g) > 0 for g in ("prefix", "suffix")}
+    key = (item.base, item.influences, item.ilvl, present, open_["prefix"], open_["suffix"], sides,
+           influence_only, tag)
+    hit = _POOL_CACHE.get(key)
+    if hit is not None:
+        return hit
     out_m, out_w = [], []
     for mid, w in gd.spawn_pool(item.base, item.influences, item.ilvl):
         m = gd.mods[mid]
@@ -142,7 +146,13 @@ def pool(item: Item, sides=("prefix", "suffix"), influence_only=None, tag=None, 
             continue
         out_m.append(mid)
         out_w.append(w)
+    if len(_POOL_CACHE) > 200_000:
+        _POOL_CACHE.clear()
+    _POOL_CACHE[key] = (out_m, out_w)
     return out_m, out_w
+
+
+_POOL_CACHE = {}
 
 
 def add_random_mod(item: Item, ch, **kw) -> Item:

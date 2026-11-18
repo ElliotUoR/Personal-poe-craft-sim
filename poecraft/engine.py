@@ -375,13 +375,16 @@ class Engine:
                 n = 0
                 if node.check_first and self._loop_exit(node, st):
                     return st
+                iid = self._iid_loop(node, st)
+                if iid is not None:
+                    return self._mc_iid(node, st, iid, ch, costs)
                 while True:
                     st = run(node.body, st)
                     n += 1
                     if st.status != "run" or self._loop_exit(node, st):
                         return st
                     if node.limit is not None and n >= node.limit:
-                        return replace(st, status="fail", msg=f"gave up after {n} attempts (line {node.line})")
+                        return st  # limit reached: leave the loop (the goal decides success)
             if isinstance(node, Foresee):
                 if st.item is None or not st.item.preview_lock:
                     raise self._err(node, "'foresee' needs an item with Hinekora's Lock "
@@ -411,11 +414,74 @@ class Engine:
                 ok = self.cond(prog.goal, st)
         if not ok and st.value:
             costs[LOST] = costs.get(LOST, 0) + st.value
-        return RunResult(ok, costs, st.item, st.msg, steps)
+        tracks = {lbl: bool(st.item is not None and self.cond(c, st)) for lbl, c in prog.tracks}
+        return RunResult(ok, costs, st.item, st.msg, steps, tracks)
+
+    # ------------------------------------------------------------ i.i.d. loops
+    # A loop whose body is a single "full reroll" action (Orb of Alteration, Chaos Orb)
+    # is a sequence of independent identical trials: the outcome distribution does not
+    # depend on what was rerolled away. Such loops are solved in closed form
+    # (geometric number of trials), both in Monte Carlo and in the exact engine.
+    IID_OPS = {"alteration", "chaos"}
+
+    def _iid_loop(self, node, st):
+        body = node.body.body
+        if len(body) != 1 or not isinstance(body[0], Act) or body[0].op not in self.IID_OPS:
+            return None
+        act = body[0]
+        item = st.item
+        if item is None:
+            return None
+        if act.op == "alteration" and item.rarity != "magic":
+            return None
+        if act.op == "chaos" and item.rarity != "rare":
+            return None
+        kept = tuple(r for r in item.mods if not M._removable(item, r)) if act.op == "chaos" else \
+            tuple(r for r in item.mods if r.fractured)
+        key = (id(act), id(node), item.base, item.ilvl, item.influences, item.rarity, kept, item.links,
+               item.white_sockets, item.tag)
+        cache = self.__dict__.setdefault("_iid_cache", {})
+        if key in cache:
+            return cache[key]
+        budget = [500_000, 0]
+        outs = _enumerate(lambda ch: self.primitive(act, st, ch), budget)
+        succ, fail = [], []
+        cost = None
+        for (s2, cost_items), p in outs.items():
+            cost = dict(cost_items)
+            (succ if self._loop_exit(node, s2) else fail).append((s2.item, p))
+        ps = sum(p for _i, p in succ)
+        res = (succ, fail, ps, cost)
+        cache[key] = res
+        return res
+
+    def _mc_iid(self, node, st, iid, ch, costs):
+        import random as _r
+        succ, fail, ps, cost = iid
+        if ps <= 0 and node.limit is None:
+            raise self._err(node, "this loop can never finish: its exit condition cannot be reached by this action")
+        rng = ch.rng
+        if ps >= 1:
+            n = 1
+        elif ps <= 0:
+            n = math.inf
+        else:
+            u = 1.0 - rng.random()
+            n = 1 + int(math.log(u) / math.log1p(-ps))
+        if node.limit is not None and n > node.limit:
+            n = node.limit
+            items, weights = [i for i, _p in fail], [p for _i, p in fail]
+        else:
+            items, weights = [i for i, _p in succ], [p for _i, p in succ]
+        for k, v in cost.items():
+            costs[k] += v * n
+        return replace(st, item=rng.choices(items, weights)[0])
 
     # ------------------------------------------------------------ exact
-    def run_exact(self, prog: Program, max_paths=200_000, max_states=4000):
-        self._budget = [max_paths, max_states]
+    def run_exact(self, prog: Program, max_paths=400_000, max_states=4000, max_seconds=90):
+        import time
+        self._budget = [max_paths, max_states, time.time() + max_seconds]
+        self._shared_ids = set()
         self._cache = {}
         out = self._exact(prog.body, State())
         # terminal accounting
@@ -429,6 +495,9 @@ class Engine:
                 S1 = dict(S1)
                 S1[LOST] = S1.get(LOST, 0) + P * lost
             res.add(st, P, S1, S2, ok)
+            for lbl, c in prog.tracks:
+                if st.item is not None and self.cond(c, st):
+                    res.tracks[lbl] = res.tracks.get(lbl, 0.0) + P
         return res
 
     def _chaos(self, vec):
@@ -497,17 +566,92 @@ class Engine:
             _acc(outcomes, s2, p, {k: p * v for k, v in cost.items()}, p * c * c)
         return outcomes
 
+    def _exact_iid(self, node, s0, iid):
+        succ, fail, p, cost = iid
+        q = 1.0 - p
+        c = self._chaos(cost)
+        L = node.limit
+        if L is None:
+            if p <= 0:
+                raise self._err(node, "this loop can never finish: its exit condition cannot be reached by this action")
+            groups = [(succ, 1.0 / p if p else 0, 1.0, (2 - p) / (p * p))]  # weight-normaliser, P, E[N], E[N^2]
+            out = {}
+            for it, po in succ:
+                w = po / p
+                _acc(out, replace(s0, item=it), w, {k: w * v / p for k, v in cost.items()}, w * c * c * (2 - p) / (p * p))
+            return out
+        # finite limit: N = number of trials, success at trial n <= L, else failure after L trials
+        en_s = sum(n * q ** (n - 1) * p for n in range(1, L + 1))       # E[N 1{success}]
+        en2_s = sum(n * n * q ** (n - 1) * p for n in range(1, L + 1))  # E[N^2 1{success}]
+        pf = q ** L
+        out = {}
+        for it, po in succ:
+            w = po / p
+            _acc(out, replace(s0, item=it), w * (1 - pf), {k: w * en_s * v for k, v in cost.items()}, w * en2_s * c * c)
+        for it, po in fail:
+            w = po / q if q else 0.0
+            _acc(out, replace(s0, item=it), w * pf, {k: w * pf * L * v for k, v in cost.items()}, w * pf * L * L * c * c)
+        return out
+
+    def _shared(self, d):
+        return id(d) in self._shared_ids
+
+    def _det_signature(self, seq, st):
+        """Signature of 'run seq from st' for loop lumping: run the longest prefix of
+        statements that is deterministic (one outcome, fixed cost); two states with the
+        same resulting state, prefix length and prefix cost behave identically."""
+        cur, cost, k = st, {}, 0
+        for k, stmt in enumerate(seq.body):
+            if cur.status != "run":
+                break
+            d = self._exact(stmt, cur)
+            if len(d) != 1:
+                # A shared cached distribution object (e.g. a loop solved once for all
+                # equivalent entry states) also makes the states equivalent.
+                return (k, ("dist", id(d)) if self._shared(d) else cur, tuple(sorted(cost.items())))
+            (s2, P, S1, S2), = d.values()
+            c = self._chaos(S1)
+            if abs(P - 1) > 1e-12 or abs(S2 - c * c) > 1e-6 * max(1.0, c * c):
+                return (k, ("dist", id(d)) if self._shared(d) else cur, tuple(sorted(cost.items())))
+            for kk, v in S1.items():
+                cost[kk] = cost.get(kk, 0) + v
+            cur = s2
+        else:
+            k = len(seq.body)
+        return (k, cur, tuple(sorted(cost.items())))
+
     def _exact_loop(self, node, s0):
         import numpy as np
         if node.check_first and self._loop_exit(node, s0):
             return {s0: (s0, 1.0, {}, 0.0)}
+        iid = self._iid_loop(node, s0)
+        if iid is not None:
+            return self._exact_iid(node, s0, iid)
+        sig0 = self._det_signature(node.body, s0)
+        lkey = ("loop", id(node), sig0)
+        if lkey in self._cache:
+            return self._cache[lkey]
+        res = self._exact_loop_solve(node, s0)
+        self._cache[lkey] = res
+        self._shared_ids.add(id(res))
+        return res
+
+    def _exact_loop_solve(self, node, s0):
+        import numpy as np
         limit = node.limit
         idx = {}
         order = []
         trans = []  # per transient: list of (kind, target, Q, Y1, Y2)
 
+        # Lumping: states whose body starts with the same deterministic "reset" (e.g. a
+        # scour or a new buy) behave identically, so they share one Markov state.
+        rep = {}
+
         def tkey(s, k):
-            return (s, k if limit is not None else 0)
+            sig = self._det_signature(node.body, s)
+            kk = (sig, k if limit is not None else 0)
+            rep.setdefault(kk, s)
+            return kk
 
         start = tkey(s0, 0)
         idx[start] = 0
@@ -515,14 +659,14 @@ class Engine:
         i = 0
         absorbed = {}
         while i < len(order):
-            s, k = order[i]
+            k = order[i][1]
+            s = rep[order[i]]
             rows = []
             for t, Q, Y1, Y2 in self._exact(node.body, s).values():
                 if t.status != "run" or self._loop_exit(node, t):
                     rows.append(("a", t, Q, Y1, Y2))
                 elif limit is not None and k + 1 >= limit:
-                    tf = replace(t, status="fail", msg=f"gave up after {limit} attempts (line {node.line})")
-                    rows.append(("a", tf, Q, Y1, Y2))
+                    rows.append(("a", t, Q, Y1, Y2))  # limit reached: leave the loop
                 else:
                     tk = tkey(t, k + 1)
                     if tk not in idx:
@@ -634,6 +778,10 @@ def _enumerate(fn, budget):
         budget[0] -= 1
         if budget[0] < 0:
             raise ExactTooLarge("too many random outcomes to enumerate exactly")
+        if len(budget) > 2 and budget[0] % 2000 == 0:
+            import time
+            if time.time() > budget[2]:
+                raise ExactTooLarge("exact computation exceeded its time budget")
         trail = ch.trail
         while trail and trail[-1][0] == len(trail[-1][1]) - 1:
             trail.pop()
@@ -653,6 +801,7 @@ class RunResult:
     item: Item | None
     msg: str
     steps: int
+    tracks: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -661,6 +810,7 @@ class ExactResult:
     mean_counts: dict = field(default_factory=dict)  # currency -> E[count]
     second_moment: float = 0.0
     outcomes: list = field(default_factory=list)
+    tracks: dict = field(default_factory=dict)
 
     def add(self, st, P, S1, S2, ok):
         if ok:

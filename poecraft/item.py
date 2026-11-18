@@ -35,7 +35,15 @@ class Item:
 
     # -------------------------------------------------------------- helpers
     def with_mods(self, mods, **kw):
-        return replace(self, mods=tuple(sorted(mods)), preview_lock=False, **kw)
+        return self.evolve(mods=tuple(sorted(mods)), preview_lock=False, **kw)
+
+    def evolve(self, **kw):
+        """Fast dataclasses.replace (this is the hot path of Monte Carlo runs)."""
+        d = {"base": self.base, "ilvl": self.ilvl, "rarity": self.rarity, "influences": self.influences,
+             "mods": self.mods, "preview_lock": self.preview_lock, "links": self.links,
+             "white_sockets": self.white_sockets, "tag": self.tag}
+        d.update(kw)
+        return Item(**d)
 
     def mod_ids(self):
         return [r.id for r in self.mods]

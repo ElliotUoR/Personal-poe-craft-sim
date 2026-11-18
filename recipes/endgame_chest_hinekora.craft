@@ -1,0 +1,21 @@
+# Endgame Chest WITH the optional Hinekora preview before the Awakener. Based on Sanavixx (https://sanavixx.com/crafting/, read 2026-11-18):
+#   1. Warlord chest: Dominance until the mana-cost mod is elevated with no other suffix;
+#      "Suffixes Cannot Be Changed" + scour -> magic item with only that mod.
+#   2. Hunter chest: Dominance to elevate T1 "Attacks have +#% to Critical Strike Chance".
+#   3. (optional Hinekora preview: see endgame_chest_hinekora.craft) Awakener's Orb.
+#   4. Beastcraft "Suffixes Cannot Be Changed", Harvest reforge Caster -> additional Curse
+#      with 0-2 extra prefixes; repeat while unhappy and a prefix is still open.
+#   5. Six-link beastcraft, Omen of Blanching.
+# Bases are crafted from normal influenced Astral Plates (alt -> regal -> "add influenced
+# mod" beastcraft -> Dominance); Sanavixx suggests buying them or using conqueror exalts.
+include "lib/endgame_chest_parts.craft"
+
+warlord_piece()
+hunter_piece()
+merge_with_preview()
+curse_reforge()
+retry_for_life()
+finish()
+
+goal has "Warlord: mana cost" elevated and has "Hunter: attack crit" elevated and has "Hunter: additional curse"
+track "life prefix (flat life T1-T2 or Hunter %life)" has "flat life" tier <= 2 or has "Hunter: max life %"

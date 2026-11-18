@@ -131,6 +131,7 @@ class Program:
     defs: dict
     goal: object = None
     name: str = ""
+    tracks: list = field(default_factory=list)
 
 
 # conditions: tuples
@@ -149,7 +150,7 @@ CONQ_ACTIONS = {"hunter_exalt": "hunter", "warlord_exalt": "warlord", "redeemer_
                 "crusader_exalt": "crusader"}
 METRICS = {"prefix_count", "suffix_count", "mod_count", "open_prefix", "open_suffix", "open_prefixes",
            "open_suffixes", "influenced_count", "elevated_count", "crafted_count", "links"}
-KEYWORDS = {"if", "else", "repeat", "until", "while", "foresee", "accept", "otherwise", "def", "include",
+KEYWORDS = {"track", "if", "else", "repeat", "until", "while", "foresee", "accept", "otherwise", "def", "include",
             "goal", "and", "or", "not", "has", "with", "for", "limit"}
 
 
@@ -160,6 +161,7 @@ class Parser:
         self.i = 0
         self.defs = defs if defs is not None else {}
         self.goal = None
+        self.tracks = []
         self.include_stack = include_stack
 
     # -- token helpers
@@ -202,7 +204,7 @@ class Parser:
             st = self.statement(top=True)
             if st is not None:
                 body.append(st)
-        return Program(Seq(1, self.file, body), self.defs, self.goal)
+        return Program(Seq(1, self.file, body), self.defs, self.goal, tracks=self.tracks)
 
     def block(self):
         start = self.expect("op", "{", "'{'")
@@ -267,6 +269,11 @@ class Parser:
         if w == "goal":
             self.next()
             self.goal = self.condition()
+            return None
+        if w == "track":
+            self.next()
+            label = self.expect("str", what="a label string").val
+            self.tracks.append((label, self.condition()))
             return None
         self.next()
         if w in SIMPLE_ACTIONS:
@@ -561,7 +568,9 @@ def parse(src, file=None) -> Program:
     prog = p.parse_program()
     body = expand(prog.body, prog.defs)
     goal = _subst(prog.goal, {}) if prog.goal else None
-    return Program(body, prog.defs, goal, name=os.path.splitext(os.path.basename(file))[0] if file else "recipe")
+    tracks = [(lbl, _subst(c, {})) for lbl, c in prog.tracks]
+    return Program(body, prog.defs, goal, name=os.path.splitext(os.path.basename(file))[0] if file else "recipe",
+                   tracks=tracks)
 
 
 def parse_file(path) -> Program:

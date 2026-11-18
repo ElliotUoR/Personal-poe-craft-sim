@@ -1,0 +1,77 @@
+# Building blocks for the Sanavixx "Endgame Chest" (Astral Plate, Hunter + Warlord).
+# Used by recipes/endgame_chest*.craft.
+include "elevate.craft"
+
+# Step 1: Warlord piece -> magic Astral Plate with ONLY the elevated
+# "Socketed Attacks have -20 to Total Mana Cost / Ignore Stuns ..." suffix. Set aside as `warlord`.
+def warlord_piece() {
+    buy "Astral Plate" ilvl 86 influence warlord for price "base:astral_plate_warlord_86"
+    repeat {
+        # make sure the only suffix is the mana-cost mod BEFORE paying for Dominance
+        repeat { alt_regal_two_mods("Warlord: mana cost") } until suffix_count == 1
+        if influenced_count < 2 { beastcraft add_mod warlord }
+        dominance_until_elevated("Warlord: mana cost")
+    } until has "Warlord: mana cost" elevated and suffix_count == 1 and open_prefix >= 1
+    beastcraft lock_suffixes
+    scour
+    set_aside warlord
+}
+
+# Step 2: Hunter piece -> elevated T1 attack crit as its only influenced mod. Set aside as `hunter`.
+def hunter_piece() {
+    buy "Astral Plate" ilvl 84 influence hunter for price "base:astral_plate_hunter_84"
+    elevate_hunter("Hunter: attack crit")
+    set_aside hunter
+}
+
+# Step 3 (no preview): Awakener with the warlord piece as target (keeps the ilvl 86 base).
+def merge() {
+    take warlord
+    awaken hunter
+    make_room_for_lock()
+}
+
+# Step 3 (Sanavixx optional): Hinekora's Lock on the magic warlord piece, then foresee
+# the Awakener result and only accept it with an open prefix.
+# UNVERIFIED: if the preview is declined we assume a NEW lock gives a NEW independent
+# preview (i.e. the outcome is not fixed per item). If that is wrong the preview has
+# no value here beyond information.
+def merge_with_preview() {
+    take warlord
+    repeat limit 10 {
+        beastcraft hinekoras_lock
+        foresee awaken hunter accept if open_prefix >= 1 otherwise { }
+    } until influenced hunter
+    if not influenced hunter { awaken hunter }
+    make_room_for_lock()
+}
+
+# The "Suffixes cannot be changed" metamod is a PREFIX, so we need an open prefix.
+# Fallback if the Awakener rolled 3 prefixes: beastcraft "Add a Suffix, Remove a Random
+# Prefix" if a suffix is open, otherwise Orb of Annulment (may hit an elevated suffix).
+def make_room_for_lock() {
+    until open_prefix >= 1 or not has "Warlord: mana cost" elevated or not has "Hunter: attack crit" elevated {
+        if open_suffix >= 1 { beastcraft add_suffix_remove_prefix } else { annul }
+    }
+    if open_prefix == 0 { fail "lost an elevated mod while making room for the metamod" }
+}
+
+# Step 4: lock suffixes + Harvest reforge Caster. "You can apply an additional Curse" is
+# the only caster-tagged prefix on a Hunter/Warlord Astral Plate (RePoE 3.30), so it is guaranteed.
+def curse_reforge() {
+    beastcraft lock_suffixes
+    harvest reforge caster
+}
+
+# Optional: retry (lock + reforge each time) for a life prefix while a prefix is open.
+def retry_for_life() {
+    until has "flat life" tier <= 2 or has "Hunter: max life %" or open_prefix == 0 limit 10 {
+        curse_reforge()
+    }
+}
+
+# Step 5: six-link + socket colours
+def finish() {
+    beastcraft max_links
+    omen blanching
+}

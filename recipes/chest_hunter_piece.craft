@@ -1,0 +1,5 @@
+# Endgame Chest step 2 on its own: elevated T1 attack crit on a Hunter Astral Plate.
+include "lib/endgame_chest_parts.craft"
+hunter_piece()
+take hunter
+goal has "Hunter: attack crit" elevated and influenced_count == 1

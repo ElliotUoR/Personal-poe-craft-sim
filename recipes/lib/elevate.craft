@@ -1,0 +1,56 @@
+# Reusable sub-recipes for elevating influenced mods with the Orb of Dominance.
+# Include with:  include "lib/elevate.craft"
+
+# Turn the current NORMAL single-influence item into a rare item that has `mod`
+# (at tier `<= 1`) plus exactly one other influenced mod, using alteration spam,
+# a regal and the "Add a Mod to a <Influence> Item" beastcraft (cheap).
+# Then Dominance once: 50% the mod becomes Elevated, 50% it is removed (start over).
+# Repeats until `mod` is elevated and it is the only influenced mod left.
+# `infl_mod_beast` must be one of: add_hunter / add_warlord / add_redeemer (see below).
+
+def alt_regal_two_mods(mod) {
+    if not is normal { scour }
+    transmute
+    until has mod tier <= 1 { alt }
+    regal
+}
+
+def dominance_until_elevated(mod) {
+    # keep using Dominance while the mod is still there and not elevated
+    until has mod elevated or not has mod or influenced_count < 2 {
+        dominance
+    }
+}
+
+# Hunter version (beastcraft "Add a Mod to a Hunter Item": Craicic Watcher + Craicic Maw)
+def elevate_hunter(mod) {
+    repeat {
+        alt_regal_two_mods(mod)
+        if influenced_count < 2 { beastcraft add_mod hunter }
+        dominance_until_elevated(mod)
+    } until has mod elevated and influenced_count == 1
+}
+
+def elevate_warlord(mod) {
+    repeat {
+        alt_regal_two_mods(mod)
+        if influenced_count < 2 { beastcraft add_mod warlord }
+        dominance_until_elevated(mod)
+    } until has mod elevated and influenced_count == 1
+}
+
+def elevate_redeemer(mod) {
+    repeat {
+        alt_regal_two_mods(mod)
+        if influenced_count < 2 { beastcraft add_mod redeemer }
+        dominance_until_elevated(mod)
+    } until has mod elevated and influenced_count == 1
+}
+
+# Strip everything except the suffixes, leaving a magic item when only one suffix is left.
+# Uses the beastcraft metamod (Wild Bristle Matron, ~1 div) instead of the bench
+# "Suffixes Cannot Be Changed" (4 divine + 4 blessed in 3.30). Needs an open prefix.
+def keep_only_suffixes() {
+    beastcraft lock_suffixes
+    scour
+}

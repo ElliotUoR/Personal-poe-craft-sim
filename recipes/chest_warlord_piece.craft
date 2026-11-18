@@ -1,0 +1,5 @@
+# Endgame Chest step 1 on its own: magic Astral Plate with only the elevated mana-cost suffix.
+include "lib/endgame_chest_parts.craft"
+warlord_piece()
+take warlord
+goal has "Warlord: mana cost" elevated and mod_count == 1 and is magic

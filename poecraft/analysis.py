@@ -27,6 +27,7 @@ class Report:
     agreement: str | None = None
     missing_prices: list = field(default_factory=list)
     example_item: str | None = None
+    tracks: dict = field(default_factory=dict)
 
     @property
     def cost_per_success(self):
@@ -57,6 +58,8 @@ class Report:
                 continue
             c = f"  = {v * prices[k]:,.0f}c" if prices else ""
             L.append(f"    {v:10.3f} x {k}{c}")
+        for lbl, pr in self.tracks.items():
+            L.append(f"  P({lbl}) = {pr:.2%}")
         if self.agreement:
             L.append(f"  exact vs monte carlo: {self.agreement}")
         if self.missing_prices:
@@ -68,6 +71,7 @@ def mc_stats(engine: Engine, prog: Program, runs=2000, seed=0):
     totals, succ, lost, lose_any = [], 0, [], 0
     counts = {}
     example = None
+    tracks = {lbl: 0 for lbl, _c in prog.tracks}
     for i in range(runs):
         r = engine.run_mc(prog, seed=seed * 1_000_003 + i)
         c = engine.prices.chaos(r.costs)
@@ -78,6 +82,8 @@ def mc_stats(engine: Engine, prog: Program, runs=2000, seed=0):
         lose_any += lv > 0
         for k, v in r.costs.items():
             counts[k] = counts.get(k, 0.0) + v
+        for k, v in r.tracks.items():
+            tracks[k] += v
         if r.success and example is None and r.item is not None:
             example = r.item.describe(engine.gd)
     counts = {k: v / runs for k, v in counts.items()}
@@ -97,6 +103,7 @@ def mc_stats(engine: Engine, prog: Program, runs=2000, seed=0):
         "p_lose_base": lose_any / runs,
         "example": example,
         "runs": runs,
+        "tracks": {k: v / runs for k, v in tracks.items()},
     }
 
 
@@ -105,7 +112,7 @@ def exact_stats(engine: Engine, prog: Program, **budget):
     mean = sum(engine.prices[k] * v for k, v in r.mean_counts.items())
     var = max(0.0, r.second_moment - mean * mean)
     return {"p_success": r.p_success, "mean_chaos": mean, "std_chaos": math.sqrt(var),
-            "mean_counts": r.mean_counts, "mean_lost": r.mean_counts.get(LOST, 0.0),
+            "mean_counts": r.mean_counts, "mean_lost": r.mean_counts.get(LOST, 0.0), "tracks": r.tracks,
             "n_outcomes": len(r.outcomes)}
 
 
@@ -114,6 +121,7 @@ def analyse(engine: Engine, prog: Program, runs=2000, mode="auto", seed=0, name=
     engine.prices.missing.clear()
     name = name or prog.name
     ex = mc = None
+    exact_note = None
     if mode in ("auto", "exact", "both"):
         try:
             ex = exact_stats(engine, prog)
@@ -121,10 +129,10 @@ def analyse(engine: Engine, prog: Program, runs=2000, mode="auto", seed=0, name=
             if mode in ("exact",):
                 raise
             ex = None
-            note = str(e)
+            exact_note = f"exact engine skipped ({e}); using Monte Carlo"
     if mode in ("mc", "both", "auto") or ex is None:
         mc = mc_stats(engine, prog, runs=runs, seed=seed)
-    agreement = None
+    agreement = exact_note
     if ex and mc:
         agreement = check_agreement(ex, mc)
     main = ex or mc
@@ -135,7 +143,8 @@ def analyse(engine: Engine, prog: Program, runs=2000, mode="auto", seed=0, name=
         mean_counts=main["mean_counts"], divine=engine.prices.divine,
         percentiles=mc["percentiles"] if mc else {}, mean_lost=main["mean_lost"],
         p_lose_base=mc["p_lose_base"] if mc else None, exact=ex, mc=mc, agreement=agreement,
-        missing_prices=sorted(engine.prices.missing), example_item=mc["example"] if mc else None)
+        missing_prices=sorted(engine.prices.missing), example_item=mc["example"] if mc else None,
+        tracks=main.get("tracks", {}))
     return rep
 
 

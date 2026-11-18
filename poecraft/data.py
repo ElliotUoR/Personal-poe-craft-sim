@@ -122,6 +122,8 @@ class GameData:
     # ------------------------------------------------------------------ families
     def _build_families(self):
         self._elevated_family_override = {}
+        self._fk_cache = {}
+        self._tier_cache = {}
         fams: dict[tuple, Family] = {}
         for m in self.mods.values():
             if m.crafted:
@@ -151,17 +153,23 @@ class GameData:
         self.families = fams
 
     def family_key(self, mod_id) -> tuple:
-        return self._elevated_family_override.get(mod_id) or self.mods[mod_id].family_key
+        k = self._fk_cache.get(mod_id)
+        if k is None:
+            k = self._elevated_family_override.get(mod_id) or self.mods[mod_id].family_key
+            self._fk_cache[mod_id] = k
+        return k
 
     def family(self, mod_id) -> Family:
         return self.families[self.family_key(mod_id)]
 
     def tier(self, mod_id) -> int:
         """1 = best natural tier, 0 = elevated."""
-        m = self.mods[mod_id]
-        if m.crafted:
-            return 1
-        return self.family(mod_id).tier_of(mod_id)
+        t = self._tier_cache.get(mod_id)
+        if t is None:
+            m = self.mods[mod_id]
+            t = 1 if m.crafted else self.family(mod_id).tier_of(mod_id)
+            self._tier_cache[mod_id] = t
+        return t
 
     # ------------------------------------------------------------------ bases
     @lru_cache(maxsize=None)
