@@ -20,6 +20,13 @@ Also listed as UNVERIFIED in README and in code comments:
   with 2 kept suffixes and 0–2 with 3 kept suffixes; Sanavixx says "0–2 extra prefixes".
 * Whether a second Hinekora's Lock gives a *new* preview of the same action.
 
+## Craft of Exile and locked reforges (2026-11-18)
+The owner's Craft of Exile run of a suffix-locked reforge gave 17/41.5/37.5% for 1/2/3 prefixes.
+That is what an UNLOCKED whole-item reforge gives in our model (22/46/31% with a Life tag,
+13/45/42% with Defence), while a real locked reforge with 3 kept suffixes gives 67/25/8% under
+the chaos-style mod-count model. It is the known CoE bug (#1): CoE breaks the lock and rerolls
+everything. Do not use CoE numbers for locked reforges.
+
 ## Consequences found 2026-11-18
 * With the locked side able to fill (Q2), the Caster reforge on the Endgame Chest guarantees the
   curse only when all 3 suffixes are full: with 2 suffixes the guaranteed caster mod is the Hunter

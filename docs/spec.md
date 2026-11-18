@@ -223,12 +223,12 @@ Answers from the owner, 2026-11-18. The rule statuses are in `poecraft rules`.
 |---|---|---|---|
 | Q1 | Partial locks | Can always be crafted; protect exactly N; take a slot on the other side; consumed by a reforge. With more than N mods on the side, the protected ones are **random** and the freed slots **can** fill. | owner-confirmed |
 | Q2 | Can a locked reforge add mods to the locked side? | **Yes.** Protected mods stay; open slots on that side can fill. Consequence: on the chest the Caster reforge only guarantees the curse when all 3 suffixes are full (2 suffixes: ~34%, the rest is the Hunter spell-crit suffix). See `curse_reforge_safe`. | owner-confirmed |
-| Q3 | Mod count of a locked reforge | Owner expects the same odds as a Chaos Orb (as modelled). | **open** |
+| Q3 | Mod count of a locked reforge | Owner expects the same odds as a Chaos Orb (as modelled: 3 locked suffixes -> 1/2/3 prefixes 67/25/8%). Craft of Exile gave 17/41.5/37.5%, which matches an UNLOCKED reforge of the whole item (our model: 22/46/31% with Life, 13/45/42% with Defence), i.e. CoE's known reforge+metamod bug, so it cannot answer this. | **open (needs in-game counts)** |
 | Q4 | Rare mod count | Range 4-6 verified (PoEDB Orb_of_Alchemy wiki text: "four to six", "three to four on jewels"). The 8/3/1 odds remain the community figure. Our Astral Plate chaos prefix split 26.3/45.2/28.5% matches the owner's Craft of Exile run (26.1/44/28.5%), but CoE likely uses the same assumption. In-game counts would settle it. | **open (odds)** |
 | Q5 | Foulborn Exalted Orb | Adds a mod; for each mod type with N eligible tiers only the top K can roll (K = ceil(N/2) if N<=6, else floor(N/2)+1), weights x N/K (PoE Wiki text). | verified |
 | Q6 | Hinekora re-lock | New, different outcome. | owner-confirmed |
 | Q7 | Awakener | Kept mod: uniformly random. Fill count: owner thinks 3-6; wiki text for Chaos/Alchemy says 4-6; modelled 4-6. | **open (fill count)** |
 | Q8 | Dominance | Random target/victim; upgrades ignore item level. | owner-confirmed |
 | Q9 | Veiled Exalted | Random side; 3 unveil options. | owner-confirmed |
-| Q10 | "Add a Mod to a <Conqueror> Item" | Needs the influence; same odds as the conqueror exalt. Owner: "you can choose the tag for the mod" (to clarify). | owner-confirmed |
+| Q10 | "Add a Mod to a <Conqueror> Item" | Needs the influence; same odds as the conqueror exalt. The owner's screenshot of tag choice is the Harvest 'Add a new <Tag> modifier and remove another' craft (non-influenced items only), now modelled as `harvest add <tag>`; PoEDB also lists 'Reforge an Influenced Rare item ... including a Influence modifier', modelled as `harvest reforge influence`. | owner-confirmed |
 | Q11 | Metamod beastcraft | Owner suspects removal. It is still in the 3.30 game data (PoEDB Bestiary_Recipe and Wild_Bristle_Matron, 2026-11-18); availability in Covens unknown. | **open** |

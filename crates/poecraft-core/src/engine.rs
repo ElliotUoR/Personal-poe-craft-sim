@@ -267,6 +267,7 @@ impl<'a> Engine<'a> {
             Op::Craft(_) => "craft".into(),
             Op::Beastcraft { .. } => "beastcraft".into(),
             Op::HarvestReforge(_) => "harvest_reforge".into(),
+            Op::HarvestAdd(_) => "harvest_add".into(),
             Op::Omen(_) => "omen".into(),
             Op::Pay(_) => "pay".into(),
             Op::Fail(_) => "fail".into(),
@@ -373,8 +374,18 @@ impl<'a> Engine<'a> {
             }
             Op::HarvestReforge(tag) => {
                 let res = m.harvest_reforge(item, ch, tag)?;
-                let (key, n) = harvest_cost(tag).unwrap();
-                (item_state(res), self.cost_of(&[(key, n)]))
+                if tag == "influence" {
+                    let (key, n) = crate::mechanics::HARVEST_REFORGE_INFLUENCE;
+                    (item_state(res), self.cost_of(&[(key, n), ("lifeforce_sacred", 1.0)]))
+                } else {
+                    let (key, n) = harvest_cost(tag).unwrap();
+                    (item_state(res), self.cost_of(&[(key, n)]))
+                }
+            }
+            Op::HarvestAdd(tag) => {
+                let res = m.harvest_add(item, ch, tag)?;
+                let (key, n) = crate::mechanics::harvest_add_cost(tag).unwrap();
+                (item_state(res), self.cost_of(&[(key, n), ("lifeforce_sacred", 1.0)]))
             }
             Op::Essence(name) => {
                 let e = self.essence_idx(a, name.s()).map_err(PrimErr::Recipe)?;

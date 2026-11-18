@@ -280,6 +280,8 @@ pub enum Op {
     Craft(Vec<Arg>),
     Beastcraft { what: String, influence: Option<String> },
     HarvestReforge(String),
+    /// Harvest "add a new <tag> modifier and remove another random modifier" (non-influenced)
+    HarvestAdd(String),
     Omen(String),
     Pay(Vec<(String, f64)>),
     Fail(String),
@@ -687,12 +689,13 @@ impl<'d> Parser<'d> {
                 return Ok(self.act(line, Op::Beastcraft { what, influence }));
             }
             "harvest" => {
-                let kind = self.expect_name("'reforge'")?;
-                if kind != "reforge" {
-                    return Err(self.err(format!("unknown harvest craft '{kind}' (only 'harvest reforge <tag>' is supported)")));
-                }
+                let kind = self.expect_name("'reforge' or 'add'")?;
                 let tag = self.expect_name("a tag like caster")?;
-                return Ok(self.act(line, Op::HarvestReforge(tag)));
+                return match kind.as_str() {
+                    "reforge" => Ok(self.act(line, Op::HarvestReforge(tag))),
+                    "add" => Ok(self.act(line, Op::HarvestAdd(tag))),
+                    _ => Err(self.err(format!("unknown harvest craft '{kind}' (use 'harvest reforge <tag>' or 'harvest add <tag>')"))),
+                };
             }
             "omen" => {
                 let what = self.expect_name("an omen name")?;

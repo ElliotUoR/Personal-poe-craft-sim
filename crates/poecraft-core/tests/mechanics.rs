@@ -229,3 +229,33 @@ fn jewels_have_two_prefixes_and_suffixes() {
         assert!(r.n_side(g, Gen::Prefix) <= 2 && r.n_side(g, Gen::Suffix) <= 2);
     }
 }
+
+// ---------------------------------------------------------------- Harvest add / influence reforge
+#[test]
+fn harvest_add_needs_non_influenced_and_swaps_a_mod() {
+    let g = gd();
+    let mech = Mech::new(g, Switches::default());
+    let life = fam_tier("flat life", "Body Armour", 2);
+    let fire = g.mod_idx("FireResist5").unwrap();
+    let it = plate(&[life, fire], &[], Rarity::Rare);
+    let mut ch = RandomChooser::new(5);
+    for _ in 0..200 {
+        let r = mech.harvest_add(&it, &mut ch, "cold").unwrap();
+        assert_eq!(r.mods.len(), 2, "one added, one removed");
+        assert!(r.mods.iter().any(|x| g.m(x.m).has_tag("cold")));
+    }
+    let infl = plate(&[life, fire], &[Influence::Hunter], Rarity::Rare);
+    assert!(mech.harvest_add(&infl, &mut ch, "cold").is_err());
+}
+
+#[test]
+fn harvest_reforge_influence_guarantees_an_influenced_mod() {
+    let g = gd();
+    let mech = Mech::new(g, Switches::default());
+    let it = plate(&[g.mod_idx("FireResist5").unwrap()], &[Influence::Hunter, Influence::Warlord], Rarity::Rare);
+    let mut ch = RandomChooser::new(6);
+    for _ in 0..200 {
+        let r = mech.harvest_reforge(&it, &mut ch, "influence").unwrap();
+        assert!(!r.influenced_mods(g).is_empty());
+    }
+}

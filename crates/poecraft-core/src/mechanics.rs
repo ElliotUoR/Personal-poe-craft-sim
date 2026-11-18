@@ -110,6 +110,31 @@ pub fn harvest_cost(tag: &str) -> Option<(&'static str, f64)> {
     HARVEST_REFORGE.iter().find(|x| x.0 == t).map(|x| (x.1, x.2))
 }
 
+/// "Reforge an Influenced Rare item with random modifiers, including a Influence modifier":
+/// 5000 Primal + 1 Sacred lifeforce (PoEDB Horticrafting, 2026-11-18). Handled as tag "influence".
+pub const HARVEST_REFORGE_INFLUENCE: (&str, f64) = ("lifeforce_primal", 5000.0);
+
+/// "Add a new <Tag> modifier and remove another random modifier from a non-Influenced item":
+/// lifeforce + 1 Sacred Crystallised Lifeforce (PoEDB Horticrafting, 2026-11-18; owner screenshot).
+pub const HARVEST_ADD: &[(&str, &str, f64)] = &[
+    ("fire", "lifeforce_wild", 15000.0),
+    ("cold", "lifeforce_vivid", 15000.0),
+    ("lightning", "lifeforce_primal", 15000.0),
+    ("physical", "lifeforce_vivid", 15000.0),
+    ("life", "lifeforce_wild", 17500.0),
+    ("defences", "lifeforce_primal", 17500.0),
+    ("chaos", "lifeforce_vivid", 17500.0),
+    ("attack", "lifeforce_wild", 17500.0),
+    ("caster", "lifeforce_primal", 17500.0),
+    ("speed", "lifeforce_vivid", 20000.0),
+    ("critical", "lifeforce_primal", 20000.0),
+];
+
+pub fn harvest_add_cost(tag: &str) -> Option<(&'static str, f64)> {
+    let t = harvest_tag(tag);
+    HARVEST_ADD.iter().find(|x| x.0 == t).map(|x| (x.1, x.2))
+}
+
 /// Beastcrafts: recipe -> (beasts consumed, number of "any rare beast", description).
 /// Source: PoEDB Bestiary_Recipe (fetched 2026-11-18).
 pub const BEASTCRAFTS: &[(&str, &[&str], u32, &str)] = &[
@@ -176,14 +201,16 @@ pub struct PoolOpts {
     pub suffix: bool,
     pub influence_only: Option<Influence>,
     pub tag: Option<TagIdx>,
+    /// only influenced mods (any influence the item has)
+    pub influenced: bool,
 }
 
 impl PoolOpts {
     pub fn both() -> Self {
-        PoolOpts { prefix: true, suffix: true, influence_only: None, tag: None }
+        PoolOpts { prefix: true, suffix: true, influence_only: None, tag: None, influenced: false }
     }
     pub fn side(g: Gen) -> Self {
-        PoolOpts { prefix: g == Gen::Prefix, suffix: g == Gen::Suffix, influence_only: None, tag: None }
+        PoolOpts { prefix: g == Gen::Prefix, suffix: g == Gen::Suffix, influence_only: None, tag: None, influenced: false }
     }
     fn allows(&self, g: Gen) -> bool {
         match g {
@@ -266,6 +293,9 @@ impl<'a> Mech<'a> {
                 if m.influence != Some(i) {
                     continue;
                 }
+            }
+            if opts.influenced && m.influence.is_none() {
+                continue;
             }
             if let Some(t) = opts.tag {
                 if !m.tag_ids.contains(&t) {
@@ -543,11 +573,19 @@ impl<'a> Mech<'a> {
     pub fn harvest_reforge(&self, item: &Item, ch: &mut dyn Chooser, tag: &str) -> CResult<Item> {
         let gd = self.gd;
         let tag = harvest_tag(tag);
-        require(harvest_cost(tag).is_some(), || {
+        require(harvest_cost(tag).is_some() || tag == "influence", || {
             format!("Unknown Harvest reforge tag '{tag}'. Known: {}.", HARVEST_REFORGE.iter().map(|x| x.0).collect::<Vec<_>>().join(", "))
         })?;
         require(item.rarity == Rarity::Rare, || "Harvest reforge needs a rare item.".into())?;
-        let tag_idx = gd.tag_idx(tag).ok_or_else(|| CraftError(format!("no mod has the tag '{tag}'")))?;
+        // "influence": Reforge an Influenced Rare item ... including a Influence modifier
+        // (rule harvest_reforge_influence)
+        let tag_idx = if tag == "influence" {
+            require(!item.influences.is_empty(), || "Harvest reforge influence needs an influenced rare item.".into())?;
+            self.rule("harvest_reforge_influence");
+            None
+        } else {
+            Some(gd.tag_idx(tag).ok_or_else(|| CraftError(format!("no mod has the tag '{tag}'")))?)
+        };
         let prot = self.protected(item, ch);
         let keep = self.kept(item, &prot, true); // metamod consumed
         if item.lock_on(gd, Gen::Prefix) != Lock::None || item.lock_on(gd, Gen::Suffix) != Lock::None {
@@ -562,8 +600,11 @@ impl<'a> Mech<'a> {
         } else {
             (!item.side_closed_by_lock(gd, Gen::Prefix), !item.side_closed_by_lock(gd, Gen::Suffix))
         };
-        let sides = PoolOpts { prefix: p_ok, suffix: s_ok, influence_only: None, tag: None };
-        let first_pool = self.pool(&base, PoolOpts { tag: Some(tag_idx), ..sides });
+        let sides = PoolOpts { prefix: p_ok, suffix: s_ok, ..PoolOpts::default() };
+        let first_pool = match tag_idx {
+            Some(t) => self.pool(&base, PoolOpts { tag: Some(t), ..sides }),
+            None => self.pool(&base, PoolOpts { influenced: true, ..sides }),
+        };
         require(!first_pool.mods.is_empty(), || format!("Harvest reforge {tag}: no {tag} modifier can roll on the changeable side(s) of this item."))?;
         let first = first_pool.mods[ch.weighted(&first_pool.weights)];
         let mut mods = keep;
@@ -571,6 +612,33 @@ impl<'a> Mech<'a> {
         let it = base.with_mods(mods);
         let n = it.mods.len().max(self.rare_count(item, ch));
         Ok(self.fill_random(it, ch, n, sides))
+    }
+
+    /// Harvest "Add a new <Tag> modifier and remove another random modifier from a
+    /// non-Influenced item" (rule harvest_add). UNVERIFIED details: works on magic and rare
+    /// items; needs an open slot for the new mod; the removed mod is chosen uniformly among the
+    /// other unprotected mods (fractured / metamod-protected mods are never removed).
+    pub fn harvest_add(&self, item: &Item, ch: &mut dyn Chooser, tag: &str) -> CResult<Item> {
+        let gd = self.gd;
+        let tag = harvest_tag(tag);
+        require(harvest_add_cost(tag).is_some(), || {
+            format!("Unknown Harvest add tag '{tag}'. Known: {}.", HARVEST_ADD.iter().map(|x| x.0).collect::<Vec<_>>().join(", "))
+        })?;
+        require(item.influences.is_empty(), || "Harvest 'add a mod and remove another' only works on non-Influenced items.".into())?;
+        require(matches!(item.rarity, Rarity::Magic | Rarity::Rare), || "Harvest 'add a mod and remove another' needs a magic or rare item.".into())?;
+        self.rule("harvest_add");
+        let t = gd.tag_idx(tag).ok_or_else(|| CraftError(format!("no mod has the tag '{tag}'")))?;
+        let pool = self.pool(item, PoolOpts { tag: Some(t), ..PoolOpts::both() });
+        require(!pool.mods.is_empty(), || format!("Harvest add {tag}: no {tag} modifier can roll (needs an open slot on a side with {tag} mods)."))?;
+        let new = Roll::new(pool.mods[ch.weighted(&pool.weights)]);
+        let prot = self.protected(item, ch);
+        let cands: Vec<Roll> = item.mods.iter().zip(&prot).filter(|(_, p)| !**p).map(|(r, _)| *r).collect();
+        let it = item.with_added(new);
+        if cands.is_empty() {
+            return Ok(it);
+        }
+        let v = cands[ch.uniform(cands.len())];
+        Ok(it.without(&v))
     }
 
     // -------------------------------------------------------------- essence
