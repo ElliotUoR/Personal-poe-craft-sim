@@ -91,7 +91,7 @@ class Engine:
         if k == "has":
             _, ref, op, n, elev, line = c
             fam = self._resolve(ref, item, line, node.file if node else None)
-            tiers = [self.gd.tier(r.id) for r in item.mods if self.gd.family_key(r.id) == fam]
+            tiers = [self.gd.tier(r.id, item.base) for r in item.mods if self.gd.family_key(r.id) == fam]
             if not tiers:
                 return False
             t = min(tiers)
@@ -114,7 +114,7 @@ class Engine:
             return v[1]
         if k == "tier":
             fam = self._resolve(v[1], item, v[2], node.file if node else None)
-            tiers = [self.gd.tier(r.id) for r in item.mods if self.gd.family_key(r.id) == fam]
+            tiers = [self.gd.tier(r.id, item.base) for r in item.mods if self.gd.family_key(r.id) == fam]
             return min(tiers) if tiers else 99
         if k == "count_infl":
             return sum(1 for r in item.influenced_mods(self.gd) if self.gd.mods[r.id].influence == v[1])
@@ -253,27 +253,30 @@ class Engine:
             except DataError as e:
                 raise RecipeError(str(e), w["line"], a.file)
             fam = gd.families[fam_key]
+            tiers = gd.tiers_for(fam_key, base)
             if w["elevated"]:
                 if not fam.elevated:
                     raise RecipeError(f'"{w["ref"]}" has no elevated version', w["line"], a.file)
                 mid = fam.elevated
             elif w["tier"] is not None:
-                if not 1 <= w["tier"] <= len(fam.tiers):
-                    raise RecipeError(f'"{w["ref"]}" has tiers 1..{len(fam.tiers)} (asked for tier {w["tier"]}); '
-                                      f'levels: ' + ", ".join(f"T{i+1}=ilvl{gd.mods[m].level}" for i, m in enumerate(fam.tiers)),
+                if not 1 <= w["tier"] <= len(tiers):
+                    raise RecipeError(f'"{w["ref"]}" has tiers 1..{len(tiers)} on this base (asked for tier {w["tier"]}); '
+                                      f'levels: ' + ", ".join(f"T{i+1}=ilvl{gd.mods[m].level}" for i, m in enumerate(tiers)),
                                       w["line"], a.file)
-                mid = fam.tiers[w["tier"] - 1]
+                mid = tiers[w["tier"] - 1]
             else:
-                ok = [m for m in fam.tiers if gd.mods[m].level <= item.ilvl]
+                ok = [m for m in tiers if gd.mods[m].level <= item.ilvl]
                 if not ok:
-                    raise RecipeError(f'"{w["ref"]}" needs item level {gd.mods[fam.tiers[-1]].level}+', w["line"], a.file)
+                    if not tiers:
+                        raise RecipeError(f'"{w["ref"]}" cannot roll on {gd.bases[base]["name"]}', w["line"], a.file)
+                    raise RecipeError(f'"{w["ref"]}" needs item level {gd.mods[tiers[-1]].level}+', w["line"], a.file)
                 mid = ok[0]
             m = gd.mods[mid]
             if m.influence and m.influence not in item.influences:
                 raise RecipeError(f'"{w["ref"]}" is a {m.influence.title()} mod; add "influence {m.influence}" to the buy',
                                   w["line"], a.file)
             if not m.elevated and m.level > item.ilvl:
-                raise RecipeError(f'"{m.short()}" (tier {gd.tier(mid)}) needs item level {m.level}, item is {item.ilvl}',
+                raise RecipeError(f'"{m.short()}" (tier {gd.tier(mid, base)}) needs item level {m.level}, item is {item.ilvl}',
                                   w["line"], a.file)
             if any(g in {g2 for r in mods for g2 in gd.mods[r.id].groups} for g in m.groups):
                 raise RecipeError(f'two mods of the same group ({m.group}) on one item', w["line"], a.file)

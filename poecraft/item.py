@@ -95,7 +95,7 @@ class Item:
         for gen in ("prefix", "suffix"):
             for r in self.side(gd, gen):
                 m = gd.mods[r.id]
-                t = gd.tier(r.id)
+                t = gd.tier(r.id, self.base)
                 tier = "crafted" if r.crafted else ("ELEVATED" if t == 0 else f"T{t}")
                 fr = " [fractured]" if r.fractured else ""
                 inf_s = f"{m.influence.title()} " if m.influence else ""

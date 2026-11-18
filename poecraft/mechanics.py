@@ -314,13 +314,13 @@ def dominance(item, ch):
     target = ch.uniform(elig)
     victim = ch.uniform([r for r in elig if r != target])
     fam = gd.family(target.id)
-    t = fam.tier_of(target.id)
-    if t == 0:
+    tiers = gd.tiers_for(gd.family_key(target.id), item.base)  # tiers on THIS base only
+    if target.id == fam.elevated:
         new_id = target.id  # value reroll only
-    elif t == 1:
+    elif target.id not in tiers or tiers.index(target.id) == 0:
         new_id = fam.elevated or target.id
     else:
-        new_id = fam.tiers[t - 2]
+        new_id = tiers[tiers.index(target.id) - 1]
     mods = [r for r in item.mods if r not in (target, victim)] + [replace(target, id=new_id)]
     return item.with_mods(tuple(mods))
 

@@ -72,15 +72,20 @@ divine = 203c.
 
 | recipe | success | expected cost | cost per success | p90 | good 3rd suffix | prefixes full after reforge |
 | --- | --- | --- | --- | --- | --- | --- |
-| endgame_chest_no_preview | 89.2% | **15.1 div** | 16.9 div | 20.6 div | 12.7% | 21% |
-| endgame_chest (Hinekora farming) | 100% | 33.4 div | 33.4 div | 49.8 div | 90.3% | 9% |
+| endgame_chest_no_preview | 89.8% | **15.3 div** | 17.0 div | 20.9 div | 10.3% | 21.5% |
+| endgame_chest (Hinekora farming) | 100% | 35.0 div | 35.0 div | 51.2 div | 87.3% | 8.3% |
+
+(Re-run 2026-11-18 after two data fixes: mods that spawn only via the `default` tag, such as
+life regen and some flat-life tiers, were missing from every pool; and tiers are now ranked per
+base instead of across all item classes.)
 
 Where the money goes in the preview version: ~8.5 Hinekora previews (Craicic Croaker + Black
 Mórrigan ≈ 1.5 div each, ≈ 13 div), 2 bench locks (8 div), 4 Dominance (6.4 div), a Foulborn
 exalt in 66% of runs (3.2 div each).
 
 **Compared with the ~17 div market price:** taking the Awakener result as it comes costs about
-15 div (p90 21 div). 11% of runs get stuck (no open prefix for the lock) and need a new
+15 div (p90 21 div). The cheapest elevated-crit Royal Plates on trade were 18–20 div
+(2026-11-18), and selling at 16 div yields about +0.7 div per attempt (`endgame_chest_sell.craft`). 11% of runs get stuck (no open prefix for the lock) and need a new
 attempt. Farming a T1–T2 resistance third suffix with previews roughly doubles the cost.
 Each good suffix needs ~8.5 previews, and that assumes a declined preview can be re-locked for a
 fresh one (UNVERIFIED). That is only worth it if such an item sells for well over 17 div.
@@ -106,9 +111,9 @@ Full write-up: [docs/blind-test-boots.md](docs/blind-test-boots.md). Recipes are
 
 | route | success | expected cost | cost per success | p90 | movement speed |
 | --- | --- | --- | --- | --- | --- |
-| **A: mine** (Critical reforge → guaranteed Elusive, bench MS) | 95.2% | **12.4 div** | **13.0 div** | 17.6 div | bench 20–24% |
-| D: hybrid (A + Sanavixx's Veiled finish) | 91.5% | 18.8 div | 20.6 div | 24.0 div | Chosen 25–30% in 45% |
-| Sanavixx method | 77.4% | 30.9 div | 39.9 div | 45.8 div | Chosen 25–30% in 75% |
+| **A: mine** (Critical reforge → guaranteed Elusive, bench MS) | 95.5% | **12.6 div** | **13.2 div** | 18.0 div | bench 20–24% |
+| D: hybrid (A + Sanavixx's Veiled finish) | 91.0% | 19.0 div | 20.9 div | 24.4 div | Chosen 25–30% in 45% |
+| Sanavixx method | 78.5% | 31.4 div | 40.0 div | 46.3 div | Chosen 25–30% in 75% |
 
 (Re-run with bench locks on rares after the "beast metamod is magic-only" correction; the first
 blind-test numbers in docs/blind-test-boots.md used the ~1 div beast lock.)
@@ -176,7 +181,8 @@ All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its
 
 ## Data and price sources (fetched 2026-11-18)
 * **Game data**: RePoE export [repoe-fork/repoe-fork.github.io](https://github.com/repoe-fork/repoe-fork.github.io),
-  commit `585b4b8`, game version **3.30.0.2.2**, pulled via git. The older
+  commit `e802a20`, game version **3.30.0.2.2**, pulled via git. All equipment classes, jewels,
+  flasks and tinctures (cluster jewels not yet). The older
   lvlvllvlvllvlvl/RePoE repo is deprecated and points there. Built into `data/gamedata.json`
   by `tools/build_data.py` (armour classes only).
 * **Mechanics**: [PoEDB](https://poedb.tw/us/) pages Orb_of_Dominance, Awakeners_Orb,

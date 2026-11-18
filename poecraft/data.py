@@ -37,7 +37,7 @@ INFLUENCE_TAG_SUFFIX = {
 INFLUENCES = tuple(INFLUENCE_TAG_SUFFIX)
 CONQUERORS = ("crusader", "redeemer", "hunter", "warlord")
 
-CLASS_TAG_PREFIX = {"Body Armour": "body_armour", "Boots": "boots", "Gloves": "gloves", "Helmet": "helmet"}
+# Influence tags per item class come from RePoE item_classes.json (see GameData.influence_tag).
 
 
 class DataError(Exception):
@@ -129,7 +129,7 @@ class GameData:
         self._tier_cache = {}
         fams: dict[tuple, Family] = {}
         for m in self.mods.values():
-            if m.crafted or m.domain == "veiled":
+            if m.crafted or m.domain == "veiled" or m.gen not in ("prefix", "suffix"):
                 continue
             if m.type.startswith("OLD"):
                 # legacy versions of elevated mods (e.g. OLDAdditionalCurseOnEnemiesMaven)
@@ -165,15 +165,50 @@ class GameData:
     def family(self, mod_id) -> Family:
         return self.families[self.family_key(mod_id)]
 
-    def tier(self, mod_id) -> int:
-        """1 = best natural tier, 0 = elevated."""
-        t = self._tier_cache.get(mod_id)
+    def tier(self, mod_id, base_id=None) -> int:
+        """1 = best natural tier, 0 = elevated.
+
+        With ``base_id`` the tier is ranked among the family's mods that can roll on that
+        base (any influence of its class). Without it, the rank is across ALL item classes,
+        which is wrong once several classes are loaded (e.g. a ring-only tier would sit
+        between two body-armour tiers), so callers should always pass the base."""
+        key = (mod_id, base_id)
+        t = self._tier_cache.get(key)
         if t is None:
             m = self.mods[mod_id]
             fk = self.family_key(mod_id)
-            t = 1 if (m.crafted or fk not in self.families) else self.families[fk].tier_of(mod_id)
-            self._tier_cache[mod_id] = t
+            if m.crafted or fk not in self.families:
+                t = 1
+            elif mod_id == self.families[fk].elevated:
+                t = 0
+            elif base_id is not None and mod_id in self.tiers_for(fk, base_id):
+                t = self.tiers_for(fk, base_id).index(mod_id) + 1
+            else:
+                t = self.families[fk].tier_of(mod_id)
+            self._tier_cache[key] = t
         return t
+
+    def weight_on(self, mod_id, base_id) -> int:
+        """Spawn weight of a mod on a base, counting every influence its class can have
+        (first matching spawn tag wins: RePoE docs/mods.md)."""
+        b = self.bases[base_id]
+        tags = set(b["tags"]) | set(self.classes[b["item_class"]]["influence_tags"])
+        for tag, w in self.mods[mod_id].spawn:
+            if tag in tags:
+                return w
+        return 0
+
+    @lru_cache(maxsize=None)
+    def tiers_for(self, fam_key, base_id) -> tuple:
+        """The family's natural tiers that can appear on this base, best first."""
+        fam = self.families[fam_key]
+        cls = self.bases[base_id]["item_class"]
+        ess = {e["mods"].get(cls) for e in self.essences.values()}
+        dom = self.bases[base_id].get("domain", "item")
+        out = [m for m in fam.tiers
+               if (self.mods[m].domain in (dom, "unveiled") and self.weight_on(m, base_id) > 0)
+               or (self.mods[m].essence_only and m in ess)]
+        return tuple(out)
 
     # ------------------------------------------------------------------ bases
     @lru_cache(maxsize=None)
@@ -193,7 +228,12 @@ class GameData:
         return self.bases[base_id]["item_class"]
 
     def influence_tag(self, base_id, influence):
-        return f"{CLASS_TAG_PREFIX[self.item_class(base_id)]}_{INFLUENCE_TAG_SUFFIX[influence]}"
+        cls = self.item_class(base_id)
+        suffix = "_" + INFLUENCE_TAG_SUFFIX[influence]
+        for t in self.classes[cls]["influence_tags"]:
+            if t.endswith(suffix):
+                return t
+        raise DataError(f"{cls} items cannot have {influence.title()} influence")
 
     # ------------------------------------------------------------------ names
     def _load_aliases(self):
@@ -270,12 +310,8 @@ class GameData:
 
     def _can_spawn_on_class(self, mod_id, item_class):
         m = self.mods[mod_id]
-        prefix = CLASS_TAG_PREFIX.get(item_class, "")
-        base_tags = self.class_tags(item_class)
-        for tag, w in m.spawn:
-            if tag.startswith(prefix + "_") or tag in base_tags:
-                return True
-        return False
+        tags = self.class_tags(item_class) | set(self.classes[item_class]["influence_tags"])
+        return any(tag in tags for tag, _w in m.spawn)
 
     @lru_cache(maxsize=None)
     def class_tags(self, item_class):
@@ -324,9 +360,11 @@ class GameData:
         tags = set(self.bases[base_id]["tags"])
         for inf in influences:
             tags.add(self.influence_tag(base_id, inf))
+        # A mod can only roll on a base of the same RePoE domain (RePoE docs/mods.md).
+        domain = self.bases[base_id].get("domain", "item")
         out = []
         for mid, m in self.mods.items():
-            if m.crafted or m.essence_only or m.elevated or m.level > ilvl or m.domain != "item":
+            if m.crafted or m.essence_only or m.elevated or m.level > ilvl or m.domain != domain                     or m.gen not in ("prefix", "suffix"):
                 continue
             w = 0
             for tag, tw in m.spawn:

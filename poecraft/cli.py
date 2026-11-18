@@ -85,7 +85,7 @@ def cmd_mods(a):
     print(f"{gd.bases[base]['name']} ilvl {a.ilvl} influences {sorted(infl) or 'none'}: "
           f"total prefix weight {tot['prefix']}, suffix weight {tot['suffix']}")
     for gen, inf, grp, _l, mid, w, m in rows:
-        t = gd.tier(mid)
+        t = gd.tier(mid, base)
         print(f"  {gen[:3]} {inf[:8]:8} T{t:<2} w={w:<5} {100 * w / tot[gen]:5.2f}%  lvl{m.level:<3} {m.short()[:70]}  "
               f"[{mid}] tags={','.join(m.tags)}")
     if a.elevated:
