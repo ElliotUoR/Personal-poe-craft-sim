@@ -4,3 +4,5 @@ __pycache__/
 data/prices.local.json
 *.egg-info/
 .venv/
+
+target/

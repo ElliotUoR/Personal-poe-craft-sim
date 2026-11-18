@@ -324,7 +324,10 @@ class GameData:
 
     def family_label(self, fam_key):
         gen, _g, inf, _t = fam_key
-        fam = self.families[fam_key]
+        fam = self.families.get(fam_key)
+        if fam is None:  # bench-crafted mods have no family entry
+            ex = max((m for m in self.mods.values() if m.family_key == fam_key), key=lambda m: (m.level, m.id)).id
+            return f'{(inf or "normal").title()} {gen} "{self.mods[ex].short()}"'
         ex = fam.tiers[0] if fam.tiers else fam.elevated
         return f'{(inf or "normal").title()} {gen} "{self.mods[ex].short()}"'
 
