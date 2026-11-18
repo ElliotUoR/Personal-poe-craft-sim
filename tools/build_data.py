@@ -56,8 +56,10 @@ CURRENCY_IDS = {
     "Metadata/Items/Currency/CurrencyUpgradeToMagic": "transmute",
     "Metadata/Items/Currency/CurrencyRemoveMod": "annul",
     "Metadata/Items/Currency/CurrencyConvertToNormal": "scour",
-    "Metadata/Items/Currency/CurrencyRerollDefences": "armourer_scrap",
+    "Metadata/Items/Currency/CurrencyRerollDefences": "sacred",  # Sacred Orb (PoEDB Sacred_Orb)
     "Metadata/Items/Currency/CurrencyArmourQuality": "armourer_scrap",
+    "Metadata/Items/Currency/CurrencyFlaskQuality": "glassblower",
+    "Metadata/Items/Currency/CurrencyGemQuality": "gcp",
     "Metadata/Items/Currency/CurrencyRerollSocketColours": "chromatic",
     "Metadata/Items/Currency/CurrencyRerollSocketNumbers": "jeweller",
     "Metadata/Items/Currency/CurrencyRerollSocketLinks": "fusing",

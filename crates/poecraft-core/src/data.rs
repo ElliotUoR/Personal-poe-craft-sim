@@ -149,6 +149,40 @@ pub struct Mod {
     pub crafted: bool,
     pub domain: String,
     pub stats: Vec<(String, f64, f64)>,
+    /// Interned mod groups (for fast "same group already on the item" checks).
+    pub group_ids: Vec<u32>,
+    /// Interned implicit tags (attack, caster, critical, ...).
+    pub tag_ids: Vec<TagIdx>,
+    pub meta: Option<MetaKind>,
+}
+
+/// Bench "meta" crafts, detected by RePoE mod type so every item class's variant is covered
+/// (armour "...B", jewellery "...C" and weapon versions have different ids).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MetaKind {
+    /// "Prefix Modifiers cannot be changed" (None) or "N Prefix Modifier(s) cannot be changed".
+    LockPrefixes(Option<u8>),
+    LockSuffixes(Option<u8>),
+    /// "Can have up to 3 Crafted Modifiers"
+    Multimod,
+    /// "Cannot roll Attack Modifiers"
+    NoAttackMods,
+    /// "Cannot roll Caster Modifiers"
+    NoCasterMods,
+}
+
+fn meta_kind(typ: &str, text: &str) -> Option<MetaKind> {
+    let count = || text.split_whitespace().next().and_then(|w| w.parse::<u8>().ok());
+    match typ {
+        "ItemGenerationCannotChangePrefixes" => Some(MetaKind::LockPrefixes(None)),
+        "ItemGenerationCannotChangeSuffixes" => Some(MetaKind::LockSuffixes(None)),
+        "ItemGenerationCannotChangePrefixesCount" => Some(MetaKind::LockPrefixes(count())),
+        "ItemGenerationCannotChangeSuffixesCount" => Some(MetaKind::LockSuffixes(count())),
+        "ItemGenerationCanHaveMultipleCraftedMods" => Some(MetaKind::Multimod),
+        "ItemGenerationCannotRollAttackAffixes" => Some(MetaKind::NoAttackMods),
+        "ItemGenerationCannotRollCasterAffixes" => Some(MetaKind::NoCasterMods),
+        _ => None,
+    }
 }
 
 impl Mod {
@@ -293,6 +327,8 @@ pub struct GameData {
     pub family_index: FxHashMap<FamilyKey, FamIdx>,
     pub essences: Vec<Essence>,
     pub bench: Vec<BenchOption>,
+    pub groups: Vec<String>,
+    pub group_index: FxHashMap<String, u32>,
     pub aliases: FxHashMap<String, String>,
     pub data_dir: PathBuf,
     tiers_cache: Mutex<FxHashMap<(FamIdx, BaseIdx), std::sync::Arc<Vec<ModIdx>>>>,
@@ -374,12 +410,25 @@ impl GameData {
         }
 
         let bench_mods: FxHashSet<&str> = raw.bench.iter().map(|b| b.module.as_str()).collect();
+        let mut groups: Vec<String> = Vec::new();
+        let mut group_index: FxHashMap<String, u32> = FxHashMap::default();
         let mut mods = Vec::new();
         let mut mod_index = FxHashMap::default();
         for (id, m) in &raw.mods {
             let influence = m.spawn.iter().find_map(|(t, _)| infl_of_tag.get(t).copied());
             let spawn = m.spawn.iter().map(|(t, w)| (intern(t, &mut tags), *w)).collect();
             let genw = m.genw.iter().map(|(t, w)| (intern(t, &mut tags), *w)).collect();
+            let tag_ids = m.tags.iter().map(|t| intern(t, &mut tags)).collect();
+            let group_ids = m
+                .groups
+                .iter()
+                .map(|g| {
+                    *group_index.entry(g.clone()).or_insert_with(|| {
+                        groups.push(g.clone());
+                        (groups.len() - 1) as u32
+                    })
+                })
+                .collect();
             mod_index.insert(id.clone(), mods.len() as ModIdx);
             mods.push(Mod {
                 id: id.clone(),
@@ -402,6 +451,9 @@ impl GameData {
                 crafted: bench_mods.contains(id.as_str()),
                 domain: m.domain.clone(),
                 stats: m.stats.clone(),
+                group_ids,
+                tag_ids,
+                meta: if bench_mods.contains(id.as_str()) { meta_kind(&m.typ, &m.text) } else { None },
             });
         }
 
@@ -439,6 +491,8 @@ impl GameData {
             family_index: FxHashMap::default(),
             essences,
             bench,
+            groups,
+            group_index,
             aliases: FxHashMap::default(),
             data_dir: data_dir.clone(),
             tiers_cache: Mutex::new(FxHashMap::default()),
@@ -544,6 +598,15 @@ impl GameData {
     }
     pub fn family_idx(&self, mi: ModIdx) -> FamIdx {
         self.family_of[mi as usize]
+    }
+
+    pub fn tag_idx(&self, t: &str) -> Option<TagIdx> {
+        self.tag_index.get(t).copied()
+    }
+
+    /// The bench option of this meta kind available for an item class.
+    pub fn metamod_for(&self, cls: &str, kind: MetaKind) -> Option<&BenchOption> {
+        self.bench.iter().find(|b| self.m(b.module).meta == Some(kind) && b.classes.iter().any(|c| c == cls))
     }
 
     pub fn item_class(&self, b: BaseIdx) -> &str {
