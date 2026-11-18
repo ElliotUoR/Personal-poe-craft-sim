@@ -394,6 +394,8 @@ def essence(item, ch, essence_id):
     lim = e.get("item_level_restriction")
     if lim:
         _require(item.ilvl <= lim, f'{e["name"]} only works on items up to item level {lim}.')
+    _require(not any(r.id in METAMODS for r in item.mods),
+             f'{e["name"]} cannot be used on an item with a metamod (PoE Wiki Meta-crafting_mod).')
     keep = tuple(r for r in item.mods if r.fractured)
     mid = e["mods"][cls]
     it = replace(item, rarity="rare").with_mods(keep + (Roll(mid),))
@@ -454,9 +456,12 @@ def beast_swap_side(item, ch, add_side):
     _require(item.rarity == "rare", "This beastcraft needs a rare item.")
     rem_side = "suffix" if add_side == "prefix" else "prefix"
     cands = [r for r in item.side(_gd, rem_side) if _removable(item, r)]
-    _require(cands, f"No removable {rem_side}.")
-    victim = ch.uniform(cands)
-    it = item.with_mods(tuple(r for r in item.mods if r != victim))
+    if not cands and item.locked_side(rem_side):
+        it = item  # PoE Wiki: with the removal side locked it "will add without removing"
+    else:
+        _require(cands, f"No removable {rem_side}.")
+        victim = ch.uniform(cands)
+        it = item.with_mods(tuple(r for r in item.mods if r != victim))
     nxt = add_random_mod(it, ch, sides=(add_side,))
     _require(nxt is not None, f"No {add_side} can roll.")
     return nxt

@@ -648,6 +648,8 @@ impl<'a> Mech<'a> {
         let cls = gd.item_class(item.base);
         let mid = e.mods.get(cls).and_then(|id| gd.mod_idx(id)).ok_or_else(|| CraftError(format!("{} cannot be used on {cls}.", e.name)))?;
         require(matches!(item.rarity, Rarity::Normal | Rarity::Rare), || format!("{} needs a normal or rare item.", e.name))?;
+        // rule essence_metamod: essences cannot be used on items with metamods (PoE Wiki)
+        require(!item.mods.iter().any(|r| gd.m(r.m).meta.is_some()), || format!("{} cannot be used on an item with a metamod (PoE Wiki).", e.name))?;
         if let Some(lim) = e.item_level_restriction {
             require(item.ilvl <= lim, || format!("{} only works on items up to item level {lim}.", e.name))?;
         }
@@ -707,9 +709,13 @@ impl<'a> Mech<'a> {
         let rem = add.other_side();
         let prot = self.protected(item, ch);
         let cands: Vec<Roll> = item.mods.iter().zip(&prot).filter(|(r, p)| !**p && gd.m(r.m).gen == rem).map(|(r, _)| *r).collect();
-        require(!cands.is_empty(), || format!("No removable {}.", rem.name()))?;
-        let v = cands[ch.uniform(cands.len())];
-        let it = item.without(&v);
+        // PoE Wiki: with the removal side locked the beastcraft "will add without removing"
+        let it = if cands.is_empty() && item.lock_on(gd, rem) != Lock::None {
+            item.clone()
+        } else {
+            require(!cands.is_empty(), || format!("No removable {}.", rem.name()))?;
+            item.without(&cands[ch.uniform(cands.len())])
+        };
         self.add_random_mod(&it, ch, PoolOpts::side(add)).ok_or_else(|| CraftError(format!("No {} can roll.", add.name())))
     }
 
