@@ -45,3 +45,11 @@ the sibling `pob-headless` harness (`POB_HEADLESS`) with `tools/pob/score_items.
 the Linux/cloud equivalent (stock LuaJIT + a pinned PoB checkout), so Claude sessions without the
 owner's machine can load builds and score items too. Measured here: the tooltip calculator
 (`GetMiscCalculator`) gives the same TotalDPS as a full rebuild for an unchanged item, at ~6x the speed.
+
+## Grafting and reports
+```
+python pob_bridge/graft_build.py TARGET.xml DONOR.xml OUT.xml --slot Amulet   # donor tree + tree jewels + chosen slots
+luajit pob_bridge/build_report.lua OUT.xml </dev/null                            # DPS/EHP/attributes vs requirements/points/warnings
+```
+`build_report.lua` reports passive points used vs allowed for the character level (PoB: level-1 + 23 quest points + extra),
+attribute totals vs the highest requirement, and PoB's own warnings (e.g. unmet gem requirements).
