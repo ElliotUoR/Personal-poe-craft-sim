@@ -13,6 +13,7 @@ Each entry names its source. The simulator follows the "in-game" column.
 | 6 | Bench "Suffixes Cannot Be Changed" in guides | 3.30 cost is 4 div + 4 blessed (see #3); the beastcraft metamod (Wild Bristle Matron, ~1 div) is cheaper | Sanavixx boots step 2 uses the bench craft | RePoE 3.30 + outof.games prices 2026-11-18 |
 
 | 8 | Partial locks "1/2 Suffix (Prefix) Modifier(s) cannot be changed" (1 / 2 divine) | Can always be crafted; protect exactly N suffixes; take a slot on the other side like the full lock; consumed by a reforge. Open: which N are protected when the item has more | ? (not modelled by other tools we checked) | in-game (owner), 2026-11-18 |
+| 9 | Does "increased bonuses gained from Equipped Boots" (Wickerman, e.g. Greater Smouldering Leg 12%) scale Replica Stampede's "Your Movement Speed is 165% of its base value"? | **Unknown, needs an in-game check** (character sheet movement speed with the Wickerman leg attached vs detached) | Path of Building 2.69.0 does **not**: CalcSetup scales boot mods with `MergeMod(mod, true)`, which keeps only BASE/INC/MORE and drops the OVERRIDE mod this line parses to, so PoB shows 165% either way. If the game scales the value it would be 165 x 1.12 = 184.8%. | PoB source (Modules/CalcSetup.lua, Classes/ModList.lua), checked 2026-11-25 with pob_bridge/inspect_boots_ms.lua on SanaviCovens |
 
 ## Open questions (not yet confirmed in game)
 Also listed as UNVERIFIED in README and in code comments:
