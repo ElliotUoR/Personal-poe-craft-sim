@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 data/prices.local.json
 *.egg-info/
+.venv/
+
+target/

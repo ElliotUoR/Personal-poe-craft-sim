@@ -76,8 +76,12 @@ Each beastcraft costs the specific captured beasts (see `poecraft/mechanics.py:B
 
 ### Harvest
 ```
-harvest reforge caster   # also: attack life defences chaos fire cold lightning physical speed critical
-                         #       minion elemental attribute mana
+harvest reforge caster    # also: attack life defences chaos fire cold lightning physical speed critical
+                          #       minion elemental attribute mana
+harvest reforge influence # influenced rares: guaranteed influenced mod (5000 Primal + 1 Sacred)
+harvest add cold          # "Add a new Cold modifier and remove another random modifier" (non-influenced
+                          #  items only; fire cold lightning physical life defences chaos attack caster
+                          #  speed critical; 15,000-20,000 lifeforce + 1 Sacred)
 ```
 Respects `Prefixes/Suffixes Cannot Be Changed` and consumes the metamod (in-game testing).
 

@@ -45,11 +45,9 @@ class RandomChooser:
 # Rules whose in-game behaviour is disputed. Recipes can flip them with `rule <name> on|off`.
 DEFAULT_RULES = {
     # Can a Harvest reforge ADD new mods into open slots on the side protected by a
-    # "Cannot Be Changed" metamod? Default off = in-game testing (user): "the protected side is
-    # left untouched". Sanavixx "Endgame Speed Boots" step 3 (reforge Physical with suffixes
-    # locked to gain a Hunter *suffix*) and step 6 (fill suffixes before the locked reforge)
-    # only make sense if this is ON. See docs/known-discrepancies.md #5.
-    "reforge_fills_locked_side": False,
+    # "Cannot Be Changed" metamod? Owner-confirmed in game 2026-11-18: YES (protected mods stay,
+    # open slots on that side can fill). Matches Sanavixx "Endgame Speed Boots" steps 3 and 6.
+    "reforge_fills_locked_side": True,
 }
 RULES = dict(DEFAULT_RULES)
 
@@ -314,13 +312,13 @@ def dominance(item, ch):
     target = ch.uniform(elig)
     victim = ch.uniform([r for r in elig if r != target])
     fam = gd.family(target.id)
-    t = fam.tier_of(target.id)
-    if t == 0:
+    tiers = gd.tiers_for(gd.family_key(target.id), item.base)  # tiers on THIS base only
+    if target.id == fam.elevated:
         new_id = target.id  # value reroll only
-    elif t == 1:
+    elif target.id not in tiers or tiers.index(target.id) == 0:
         new_id = fam.elevated or target.id
     else:
-        new_id = fam.tiers[t - 2]
+        new_id = tiers[tiers.index(target.id) - 1]
     mods = [r for r in item.mods if r not in (target, victim)] + [replace(target, id=new_id)]
     return item.with_mods(tuple(mods))
 
@@ -396,6 +394,8 @@ def essence(item, ch, essence_id):
     lim = e.get("item_level_restriction")
     if lim:
         _require(item.ilvl <= lim, f'{e["name"]} only works on items up to item level {lim}.')
+    _require(not any(r.id in METAMODS for r in item.mods),
+             f'{e["name"]} cannot be used on an item with a metamod (PoE Wiki Meta-crafting_mod).')
     keep = tuple(r for r in item.mods if r.fractured)
     mid = e["mods"][cls]
     it = replace(item, rarity="rare").with_mods(keep + (Roll(mid),))
@@ -456,9 +456,12 @@ def beast_swap_side(item, ch, add_side):
     _require(item.rarity == "rare", "This beastcraft needs a rare item.")
     rem_side = "suffix" if add_side == "prefix" else "prefix"
     cands = [r for r in item.side(_gd, rem_side) if _removable(item, r)]
-    _require(cands, f"No removable {rem_side}.")
-    victim = ch.uniform(cands)
-    it = item.with_mods(tuple(r for r in item.mods if r != victim))
+    if not cands and item.locked_side(rem_side):
+        it = item  # PoE Wiki: with the removal side locked it "will add without removing"
+    else:
+        _require(cands, f"No removable {rem_side}.")
+        victim = ch.uniform(cands)
+        it = item.with_mods(tuple(r for r in item.mods if r != victim))
     nxt = add_random_mod(it, ch, sides=(add_side,))
     _require(nxt is not None, f"No {add_side} can roll.")
     return nxt
@@ -543,13 +546,29 @@ def unveil(item, ch, preferences):
     return rest.with_mods(rest.mods + (Roll(choice, crafted=False),))
 
 
+def keep_tiers(n):
+    """Tiers kept out of N eligible (PoE Wiki, Foulborn Exalted Orb)."""
+    return -(-n // 2) if n <= 6 else n // 2 + 1
+
+
 def foulborn_exalt(item, ch, side=None):
-    """Foulborn Exalted Orb (Covens-era currency). Its exact effect was not on the PoEDB
-    pages fetched. UNVERIFIED model: like an Exalted Orb, adds one random mod to an open
-    side (used by the user to fill an open prefix when suffixes are full, and by
-    Sanavixx to fill suffixes). ``side`` restricts it to one side, standing in for a
-    "Cannot Be Changed" craft on the other side (Sanavixx boots step 6)."""
+    """Foulborn Exalted Orb. PoEDB: 'Augments a rare item with a new random modifier with
+    higher level modifiers being more likely'. PoE Wiki (text supplied by the owner,
+    2026-11-18): for each modifier type with N eligible tiers only the K highest can roll,
+    K = ceil(N/2) if N <= 6 else floor(N/2) + 1, weights multiplied by N/K.
+    ``side`` restricts it to one side (stand-in for a "Cannot Be Changed" craft)."""
     _require(item.rarity == "rare", "Foulborn Exalted Orb needs a rare item.")
-    nxt = add_random_mod(item, ch, sides=(side,) if side else ("prefix", "suffix"))
-    _require(nxt is not None, f"Foulborn Exalted Orb: no open {side or 'affix'}.")
-    return nxt
+    mods, weights = pool(item, sides=(side,) if side else ("prefix", "suffix"))
+    _require(mods, f"Foulborn Exalted Orb: no open {side or 'affix'}.")
+    groups = {}
+    for m, w in zip(mods, weights):
+        groups.setdefault(_gd.family_key(m), []).append((m, w))
+    om, ow = [], []
+    for fk in sorted(groups, key=lambda k: mods.index(groups[k][0][0])):
+        v = sorted(groups[fk], key=lambda mw: -_gd.mods[mw[0]].level)
+        n, k = len(v), keep_tiers(len(v))
+        for m, w in v[:k]:
+            om.append(m)
+            ow.append(w * 840 * n // k)
+    mid = ch.weighted(om, ow)
+    return item.with_mods(item.mods + (Roll(mid),))

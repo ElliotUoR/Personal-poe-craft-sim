@@ -64,12 +64,29 @@ def merge_blind() {
     awaken hunter
 }
 
-# Step 4: one locked Caster reforge ("You can apply an additional Curse" is the only
-# caster-tagged prefix on a Hunter/Warlord Astral Plate, so it is guaranteed).
+# Step 4: locked Caster reforge. "You can apply an additional Curse" is the only caster-tagged
+# PREFIX on a Hunter/Warlord Astral Plate, but the Hunter spell-crit SUFFIX is caster-tagged too,
+# and a locked reforge can add mods to the locked side's open slots (owner, 2026-11-18). So the
+# curse is only guaranteed when all 3 suffixes are full (with 2 suffixes: ~34%).
+# Version 1 (as the owner crafts it): one attempt, whatever happens.
 def curse_reforge() {
     if open_prefix == 0 { fail "no open prefix for the Suffixes Cannot Be Changed craft (stuck)" }
     craft lock_suffixes
     harvest reforge caster
+}
+
+# Version 2: fill the 3rd suffix first when cheap (one Exalted Orb if 2 prefixes are open), and if
+# the curse still missed (the spell-crit suffix took the open suffix slot, so suffixes are now
+# full) lock + reforge once more: that attempt is guaranteed while a prefix is open.
+def curse_reforge_safe() {
+    if open_prefix == 0 { fail "no open prefix for the Suffixes Cannot Be Changed craft (stuck)" }
+    if suffix_count == 2 and open_prefix >= 2 { exalt }
+    craft lock_suffixes
+    harvest reforge caster
+    if not has "Hunter: additional curse" and open_prefix >= 1 {
+        craft lock_suffixes
+        harvest reforge caster
+    }
 }
 
 # Step 5: fill the open prefixes: 2 open -> Foulborn exalt; then 1 open -> bench armour.

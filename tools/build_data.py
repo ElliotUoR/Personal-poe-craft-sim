@@ -28,7 +28,20 @@ import json
 import os
 import sys
 
-CLASSES = ["Body Armour", "Boots", "Gloves", "Helmet"]
+# Every equipment class with influence tags, plus jewels, flasks and tinctures.
+# Cluster jewels (affliction_jewel) use a separate notable system and are not included yet.
+CLASSES = [
+    "Body Armour", "Boots", "Gloves", "Helmet", "Shield", "Quiver",
+    "Amulet", "Ring", "Belt",
+    "Claw", "Dagger", "Rune Dagger", "Wand", "One Hand Sword", "Thrusting One Hand Sword",
+    "One Hand Axe", "One Hand Mace", "Sceptre", "Bow", "Staff", "Warstaff",
+    "Two Hand Sword", "Two Hand Axe", "Two Hand Mace",
+    "Jewel", "AbyssJewel",
+    "LifeFlask", "ManaFlask", "HybridFlask", "UtilityFlask", "Tincture",
+]
+# A mod can only roll on a base of the same RePoE domain (mods.json "domain" vs
+# base_items.json "domain"). Source: RePoE docs/mods.md.
+DOMAINS = {"item", "flask", "jewel", "abyss_jewel", "tincture"}
 
 # RePoE cost item ids -> our price keys.
 CURRENCY_IDS = {
@@ -43,8 +56,10 @@ CURRENCY_IDS = {
     "Metadata/Items/Currency/CurrencyUpgradeToMagic": "transmute",
     "Metadata/Items/Currency/CurrencyRemoveMod": "annul",
     "Metadata/Items/Currency/CurrencyConvertToNormal": "scour",
-    "Metadata/Items/Currency/CurrencyRerollDefences": "armourer_scrap",
+    "Metadata/Items/Currency/CurrencyRerollDefences": "sacred",  # Sacred Orb (PoEDB Sacred_Orb)
     "Metadata/Items/Currency/CurrencyArmourQuality": "armourer_scrap",
+    "Metadata/Items/Currency/CurrencyFlaskQuality": "glassblower",
+    "Metadata/Items/Currency/CurrencyGemQuality": "gcp",
     "Metadata/Items/Currency/CurrencyRerollSocketColours": "chromatic",
     "Metadata/Items/Currency/CurrencyRerollSocketNumbers": "jeweller",
     "Metadata/Items/Currency/CurrencyRerollSocketLinks": "fusing",
@@ -76,12 +91,13 @@ def main(argv=None):
     out_classes = {}
     relevant_tags = set()
     for cls in CLASSES:
-        out_classes[cls] = {"influence_tags": item_classes[cls]["influence_tags"]}
-        relevant_tags.update(item_classes[cls]["influence_tags"])
+        tags = item_classes.get(cls, {}).get("influence_tags") or []
+        out_classes[cls] = {"influence_tags": tags}
+        relevant_tags.update(tags)
 
     out_bases = {}
     for bid, b in bases.items():
-        if b.get("item_class") not in CLASSES or b.get("domain") != "item":
+        if b.get("item_class") not in CLASSES or b.get("domain") not in DOMAINS:
             continue
         if b.get("release_state") != "released":
             continue
@@ -91,9 +107,14 @@ def main(argv=None):
             "tags": b["tags"],
             "drop_level": b["drop_level"],
             "implicits": b.get("implicits", []),
+            "domain": b["domain"],
+            "properties": {k: v for k, v in (b.get("properties") or {}).items() if v is not None},
+            "requirements": b.get("requirements"),
         }
         relevant_tags.update(b["tags"])
-    relevant_tags.discard("default")
+    # "default" matches every base (RePoE: first matching spawn tag wins), so mods that spawn
+    # only via "default" must be kept. Dropping it lost e.g. LifeRegeneration1-7 (bug until 2026-11-18).
+    relevant_tags.add("default")
 
     keep = {}
 
@@ -111,10 +132,15 @@ def main(argv=None):
             "essence_only": m.get("is_essence_only", False),
             "adds_tags": m.get("adds_tags", []),
             "domain": m["domain"],
+            "stats": [[st["id"], st["min"], st["max"]] for st in m.get("stats", [])],
         }
 
     for mid, m in mods.items():
-        if m["domain"] != "item" or m["generation_type"] not in ("prefix", "suffix"):
+        if m["domain"] not in DOMAINS or m["generation_type"] not in ("prefix", "suffix"):
+            continue
+        # PoE Royale leftovers still carry spawn weights in the export but cannot roll in the
+        # real game (absent from PoEDB mod lists, checked on Boots_dex 2026-11-18).
+        if "royale" in mid.lower():
             continue
         tags_here = {s["tag"] for s in m["spawn_weights"]}
         spawnable = any(s["weight"] > 0 and s["tag"] in relevant_tags for s in m["spawn_weights"])
@@ -129,6 +155,11 @@ def main(argv=None):
                 keep[mid] = slim(mid, m)
         if mid in ("VeiledPrefix", "VeiledSuffix"):
             keep[mid] = slim(mid, m)
+
+    for b in out_bases.values():
+        for mid in b["implicits"]:
+            if mid in mods and mid not in keep:
+                keep[mid] = slim(mid, mods[mid])
 
     out_ess = {}
     for eid, e in essences.items():

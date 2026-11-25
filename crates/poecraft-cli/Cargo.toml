@@ -1,0 +1,13 @@
+[package]
+name = "poecraft-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.104"
+poecraft-core = { version = "0.1.0", path = "../poecraft-core" }
+serde_json = "1.0.154"
+
+[[bin]]
+name = "poecraft"
+path = "src/main.rs"

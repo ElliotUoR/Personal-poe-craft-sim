@@ -80,18 +80,23 @@ def test_dominance_skips_metamod_protected_mods():
 
 
 def test_reforge_respects_suffix_lock_and_consumes_metamod():
-    """Ground truth from in-game testing (user)."""
+    """Ground truth from in-game testing (owner): protected suffixes stay, the metamod is
+    consumed, and (2026-11-18) the locked side CAN gain new mods in open slots. So the Caster
+    reforge only guarantees the curse prefix when all 3 suffixes are full; with 2 suffixes the
+    guaranteed caster mod can be the Hunter spell-crit suffix instead."""
     crit_e = fam("Hunter: Attacks have").elevated
     mana_e = fam("Warlord: total mana cost").elevated
-    it = item(crit_e, mana_e)
-    it = M.bench_craft(it, SUFFIX_LOCK)
     ch = M.RandomChooser(1)
+    full = M.bench_craft(item(crit_e, mana_e, "FireResist5"), SUFFIX_LOCK)
     for _ in range(200):
-        r = M.harvest_reforge(it, ch, "caster")
-        assert r.has_mod(crit_e) and r.has_mod(mana_e)
+        r = M.harvest_reforge(full, ch, "caster")
+        assert r.has_mod(crit_e) and r.has_mod(mana_e) and r.has_mod("FireResist5")
         assert not r.has_mod(SUFFIX_LOCK)  # consumed
-        assert r.has_mod("AdditionalCurseOnEnemiesInfluence1")  # only caster prefix -> guaranteed
-        assert r.n_suffix(GD) == 2
+        assert r.has_mod("AdditionalCurseOnEnemiesInfluence1")  # 3 suffixes full -> guaranteed
+    two = M.bench_craft(item(crit_e, mana_e), SUFFIX_LOCK)
+    hits = sum(M.harvest_reforge(two, ch, "caster").has_mod("AdditionalCurseOnEnemiesInfluence1")
+               for _ in range(3000))
+    assert 0.29 < hits / 3000 < 0.39  # curse 250 vs spell crit T1+T2 250+250 -> 1/3
 
 
 def test_scour_with_suffix_lock_leaves_magic_item():
@@ -228,8 +233,9 @@ goal has "Hunter: tailwind" and count(hunter) >= 2
 '''
     prog = parse(src)
     assert ENG.run_mc(prog, seed=1).success
-    with pytest.raises(RecipeError):  # default rule: no physical prefix can roll
-        ENG.run_mc(parse(src.replace("rule reforge_fills_locked_side on", "")), seed=1)
+    # owner-confirmed default is now ON; switching it off makes the reforge impossible
+    with pytest.raises(RecipeError):  # no physical prefix can roll
+        ENG.run_mc(parse(src.replace("rule reforge_fills_locked_side on", "rule reforge_fills_locked_side off")), seed=1)
 
 
 def test_beast_metamod_only_on_magic():

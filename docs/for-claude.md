@@ -1,5 +1,8 @@
 # Notes for future Claude sessions driving poecraft
 
+Use the Rust binary (`cargo build --release`, then `target/release/poecraft ...`); the Python
+package is the reference implementation. The commands and recipe language are the same.
+
 Workflow when the user describes a craft in plain English:
 1. Find the mods: `python -m poecraft mods "<base>" --influence <i1>,<i2> --ilvl N --search "<text>"`.
    Use `--elevated` for elevated versions and `--tag caster` (etc.) to see what a Harvest reforge
@@ -22,6 +25,15 @@ Rules of thumb found so far:
   bench craft for 1). Never annul to make room (too risky). Full prefixes = keep the item.
 * "Add a Mod to a <Conqueror> Item" beastcrafts cost ~2–3c and are the cheap way to get a
   second influenced mod for Dominance.
+
+Owner's way of crafting the Endgame Chest (2026-11-18): one locked reforge, then Foulborn exalt
+(2 open prefixes) or bench armour (1 open); never annul to make room. The beast metamod only works
+on magic items. Partial locks ("1/2 Suffix Modifier(s) cannot be changed") can always be crafted,
+protect exactly N, take a slot like the full lock and are consumed by reforges.
+
+Windows notes: PowerShell 5.1 `Get-Content`/`Set-Content` and `git show | Set-Content` corrupt
+UTF-8 (e.g. "Mórrigan", "—"); edit files with Python or the Edit tool and use Git Bash
+redirection for raw bytes.
 
 Refreshing data: see `tools/build_data.py` (RePoE via git) and the `source`/`fetched` fields of
 `data/prices.json`. In this environment poewiki.net returns 403. PoEDB, sanavixx.com and

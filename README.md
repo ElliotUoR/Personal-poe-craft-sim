@@ -8,17 +8,61 @@ Small cases are computed **exactly** (enumeration plus absorbing Markov chains).
 The tool is meant to be driven by Claude: you describe a craft in plain English, Claude writes a
 recipe, runs it, and compares alternatives.
 
+There are two engines with the same recipe language and commands:
+
+* **Rust (main engine, phase 1 of [docs/spec.md](docs/spec.md))**: `crates/`. Monte Carlo runs on
+  every CPU core and is roughly 300x faster than Python (8,000 chest runs in about 0.4 s).
+* **Python (reference)**: `poecraft/`. It stays as the cross-check until the Rust results have
+  matched it on every recipe for a while (`tools/parity_engine.py`, `tools/parity_data.py`).
+
 ```
-pip install numpy pytest            # only runtime dependency: numpy
+cargo build --release                         # Rust 1.80+; binary: target/release/poecraft
+target/release/poecraft run recipes/endgame_chest.craft
+target/release/poecraft compare recipes/boots/*.craft
+target/release/poecraft rules                 # every rule with its source and status
+cargo test --release                          # Rust tests
+
+pip install numpy pytest                      # Python reference
 python -m poecraft run recipes/endgame_chest.craft
-python -m poecraft compare recipes/endgame_chest*.craft
 python -m pytest -q
+python tools/parity_engine.py                 # Rust vs Python on every recipe
 ```
+
+**Web app (local only):** double-click `start.bat` (or `cargo run --release -p poecraft-server`),
+then open http://127.0.0.1:8790. Tabs: Item builder (base, item level, influences, legal mods only,
+mod pool with weights/chances and why a mod is blocked, elevated versions, bench crafts, crafting
+hints computed from the pool, paste/import, Copy item for PoB), Simulator (pick or edit a recipe,
+live progress bar), Compare (rank several recipes), Rules, Prices. The JSON API is documented at the
+top of `crates/poecraft-server/src/main.rs`.
+
+Test in PoB: the item builder's "Test in Path of Building" card scores the item in any of your
+PoB builds (found under Documents/Path of Building/Builds) through the sibling `pob-headless`
+harness (`tools/pob/score_items.lua`): Pinnacle boss, guard skills excluded from EHP, optional
+resists-capped fill, flasks up and down, DPS/EHP/max-hit change against the item currently in the
+slot. About 4.5 s per build; the build files are never modified. Env overrides: POB_HEADLESS,
+POB_BUILDS.
+
+Trade links: the item builder's "Open trade search" (or `POST /api/trade/link`) builds a
+pathofexile.com search for the item: one stat filter per mod line (lower end of the tier's range,
+negative values as a maximum), influence filters, exact base or any base of the class, instant
+buyout. Stat ids come from `data/trade_stats.json` (`python tools/fetch_trade_stats.py`).
+
+Item text (spec phase 2, started 2026-11-18): `poecraft sample RECIPE --pob` prints the crafted
+item as Path of Building text (paste via Items > Create custom), and `poecraft parse-item FILE|-`
+reads PoB or in-game clipboard text (incl. Ctrl+Alt+C advanced copy) back into a crafting item.
+Checked end to end through PoB itself: PoB reads the export with both influences, and our parser
+recovers the identical item from PoB's re-export.
+
+Every Rust result lists the unverified or disputed rules it depends on (see `poecraft rules`
+and docs/spec.md §7). Rust-only additions so far: partial locks (`craft lock_1_suffix`,
+`lock_2_suffixes`, `lock_1_prefix`, `lock_2_prefixes`), "cannot roll attack/caster modifiers"
+(`craft no_attack_mods` / `no_caster_mods`), metamods for every item class, and all item classes
+(armour, weapons, jewellery, quivers, shields, jewels, flasks, tinctures).
 
 ## Commands
 | command | what it does |
 | --- | --- |
-| `run RECIPE [--runs N] [--mode auto/exact/mc/both] [--json] [--show-item]` | Evaluate one recipe. `auto` tries exact first (90 s budget) and falls back to Monte Carlo. `both` reports both plus an agreement check. |
+| `run RECIPE [--runs N] [--mode auto/exact/mc/both] [--json] [--show-item]` | Evaluate one recipe. `auto` tries exact first (Rust: 10 s / 300k paths; Python: 90 s) and falls back to Monte Carlo. `both` reports both plus an agreement check. |
 | `compare R1 R2 ... [--sort cost_per_success/mean/risk/std] [-v] [--json]` | Rank recipes against the same prices. |
 | `sample RECIPE [--seed S]` | Run once, print the final item, the cost and any `show` output. |
 | `check RECIPE` | Parse and run 20 times to catch errors quickly. |
@@ -72,15 +116,20 @@ divine = 203c.
 
 | recipe | success | expected cost | cost per success | p90 | good 3rd suffix | prefixes full after reforge |
 | --- | --- | --- | --- | --- | --- | --- |
-| endgame_chest_no_preview | 89.2% | **15.1 div** | 16.9 div | 20.6 div | 12.7% | 21% |
-| endgame_chest (Hinekora farming) | 100% | 33.4 div | 33.4 div | 49.8 div | 90.3% | 9% |
+| endgame_chest_no_preview | 89.8% | **15.3 div** | 17.0 div | 20.9 div | 10.3% | 21.5% |
+| endgame_chest (Hinekora farming) | 100% | 35.0 div | 35.0 div | 51.2 div | 87.3% | 8.3% |
+
+(Re-run 2026-11-18 after two data fixes: mods that spawn only via the `default` tag, such as
+life regen and some flat-life tiers, were missing from every pool; and tiers are now ranked per
+base instead of across all item classes.)
 
 Where the money goes in the preview version: ~8.5 Hinekora previews (Craicic Croaker + Black
 Mórrigan ≈ 1.5 div each, ≈ 13 div), 2 bench locks (8 div), 4 Dominance (6.4 div), a Foulborn
 exalt in 66% of runs (3.2 div each).
 
 **Compared with the ~17 div market price:** taking the Awakener result as it comes costs about
-15 div (p90 21 div). 11% of runs get stuck (no open prefix for the lock) and need a new
+15 div (p90 21 div). The cheapest elevated-crit Royal Plates on trade were 18–20 div
+(2026-11-18), and selling at 16 div yields about +0.7 div per attempt (`endgame_chest_sell.craft`). 11% of runs get stuck (no open prefix for the lock) and need a new
 attempt. Farming a T1–T2 resistance third suffix with previews roughly doubles the cost.
 Each good suffix needs ~8.5 previews, and that assumes a declined preview can be re-locked for a
 fresh one (UNVERIFIED). That is only worth it if such an item sells for well over 17 div.
@@ -106,9 +155,9 @@ Full write-up: [docs/blind-test-boots.md](docs/blind-test-boots.md). Recipes are
 
 | route | success | expected cost | cost per success | p90 | movement speed |
 | --- | --- | --- | --- | --- | --- |
-| **A: mine** (Critical reforge → guaranteed Elusive, bench MS) | 95.2% | **12.4 div** | **13.0 div** | 17.6 div | bench 20–24% |
-| D: hybrid (A + Sanavixx's Veiled finish) | 91.5% | 18.8 div | 20.6 div | 24.0 div | Chosen 25–30% in 45% |
-| Sanavixx method | 77.4% | 30.9 div | 39.9 div | 45.8 div | Chosen 25–30% in 75% |
+| **A: mine** (Critical reforge → guaranteed Elusive, bench MS) | 95.5% | **12.6 div** | **13.2 div** | 18.0 div | bench 20–24% |
+| D: hybrid (A + Sanavixx's Veiled finish) | 91.0% | 19.0 div | 20.9 div | 24.4 div | Chosen 25–30% in 45% |
+| Sanavixx method | 78.5% | 31.4 div | 40.0 div | 46.3 div | Chosen 25–30% in 75% |
 
 (Re-run with bench locks on rares after the "beast metamod is magic-only" correction; the first
 blind-test numbers in docs/blind-test-boots.md used the ~1 div beast lock.)
@@ -176,14 +225,20 @@ All rules are in [`poecraft/mechanics.py`](poecraft/mechanics.py), each with its
 
 ## Data and price sources (fetched 2026-11-18)
 * **Game data**: RePoE export [repoe-fork/repoe-fork.github.io](https://github.com/repoe-fork/repoe-fork.github.io),
-  commit `585b4b8`, game version **3.30.0.2.2**, pulled via git. The older
+  commit `e802a20`, game version **3.30.0.2.2**, pulled via git. All equipment classes, jewels,
+  flasks and tinctures (cluster jewels not yet). The older
   lvlvllvlvllvlvl/RePoE repo is deprecated and points there. Built into `data/gamedata.json`
   by `tools/build_data.py` (armour classes only).
 * **Mechanics**: [PoEDB](https://poedb.tw/us/) pages Orb_of_Dominance, Awakeners_Orb,
   Hunters_Exalted_Orb, Horticrafting, Bestiary_Recipe, Hinekoras_Lock, Veiled_Exalted_Orb.
   These embed the community wiki text. **poewiki.net returned HTTP 403** from this environment,
   so PoE Wiki was read only through PoEDB's copies.
-* **Prices**: [outof.games](https://outof.games/realms/pathofexile/economy/currency/) (poe.ninja
+* **Prices** (from 2026-11-18 evening): poe.ninja's PoE1 API, fetched by `python tools/fetch_prices.py`
+  or the web app's Prices tab. Currency, omens, essences and fossils come from the exchange
+  endpoint; beasts and base types (with item level and influence) from the stash endpoint. The
+  stash *currency* endpoint is not used (it said Divine 127.5c while the exchange said 226.2c).
+  Earlier prices came from [outof.games] (poe.ninja data shown on a web page).
+* **Prices (before)**: [outof.games](https://outof.games/realms/pathofexile/economy/currency/) (poe.ninja
   data) for currency, beasts, omens, essences and base types, **Covens** league. The
   poe.ninja API itself returned 404 on the old endpoint. Saved in `data/prices.json` with the
   date. Estimated entries (influenced bases, Omen of Blanching, "any rare beast") are listed

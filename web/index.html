@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>poecraft</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>poecraft</h1>
+  <nav id="tabs">
+    <button data-tab="builder" class="active">Item builder</button>
+    <button data-tab="sim">Simulator</button>
+    <button data-tab="compare">Compare</button>
+    <button data-tab="rules">Rules</button>
+    <button data-tab="prices">Prices</button>
+  </nav>
+  <div id="meta" class="muted"></div>
+</header>
+
+<main>
+<!-- ============================================================ builder -->
+<section id="builder" class="tab active">
+  <div class="cols">
+    <div class="col narrow">
+      <div class="card">
+        <h2>Base</h2>
+        <label>Base type <input id="base" list="baselist" value="Astral Plate" autocomplete="off"></label>
+        <datalist id="baselist"></datalist>
+        <div class="row">
+          <label>Item level <input id="ilvl" type="number" min="1" max="100" value="86"></label>
+          <label>Rarity <select id="rarity"><option>rare</option><option>magic</option><option>normal</option></select></label>
+        </div>
+        <div id="influences" class="chips"></div>
+        <p class="muted small">Up to two influences.</p>
+      </div>
+      <div class="card">
+        <h2>Paste an item</h2>
+        <textarea id="paste" rows="8" placeholder="Paste PoB item text or in-game Ctrl+C / Ctrl+Alt+C text"></textarea>
+        <button id="importBtn">Import</button>
+        <div id="importMsg" class="small"></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card item" id="itemCard"></div>
+      <div class="card">
+        <h2>Copy to Path of Building</h2>
+        <div class="row">
+          <label>Value rolls <input id="roll" type="range" min="0" max="1" step="0.05" value="1"></label>
+          <label>Quality <input id="quality" type="number" min="0" max="30" value="20"></label>
+          <button id="copyBtn">Copy item</button>
+        </div>
+        <pre id="pobText" class="small"></pre>
+      </div>
+      <div class="card">
+        <h2>Check price on trade</h2>
+        <div class="row">
+          <label class="small"><input id="anyBase" type="checkbox"> any base of this type</label>
+          <button id="tradeBtn">Open trade search</button>
+        </div>
+        <div id="tradeMsg" class="small"></div>
+        <div class="row"><label>Your expected sell price (div) <input id="sellPrice" type="number" step="0.5" min="0" placeholder="e.g. 16"></label></div>
+        <p class="muted small">Use it in a recipe as <code>sell N divine</code> to get profit and margin.</p>
+      </div>
+      <div class="card">
+        <h2>Test in Path of Building</h2>
+        <input id="buildFilter" placeholder="filter builds">
+        <div id="buildList" class="chips" style="max-height:150px;overflow:auto"></div>
+        <div class="row">
+          <label class="small"><input id="pobFill" type="checkbox" checked> resists capped</label>
+          <label class="small"><input id="pobFast" type="checkbox"> fast (tooltip path, DPS ~2-3% off)</label>
+          <button id="pobBtn">Test item</button>
+        </div>
+        <div class="progress" id="pobProgress" hidden><div class="bar"><div></div></div><span class="ptext"></span></div>
+        <div id="pobResult" class="small"></div>
+        <p class="muted small">Pinnacle boss, guard skills excluded from EHP, flasks up and down; the build file is not changed.</p>
+      </div>
+      <div class="card" id="hintsCard"><h2>Crafting hints</h2><ul id="hints"></ul></div>
+    </div>
+
+    <div class="col wide">
+      <div class="card">
+        <h2>Mod pool</h2>
+        <div class="row">
+          <input id="poolFilter" placeholder="filter text / tag (e.g. life, caster)">
+          <select id="poolSide"><option value="">both sides</option><option>prefix</option><option>suffix</option></select>
+          <label class="small"><input id="showBlocked" type="checkbox"> show blocked</label>
+        </div>
+        <table class="pool"><thead><tr><th></th><th>side</th><th>tier</th><th>mod</th><th>lvl</th><th>weight</th><th>chance</th></tr></thead><tbody id="poolBody"></tbody></table>
+      </div>
+      <div class="card"><h2>Elevated versions</h2><table class="pool"><tbody id="elevBody"></tbody></table></div>
+      <div class="card"><h2>Bench crafts</h2><input id="benchFilter" placeholder="filter"><table class="pool"><tbody id="benchBody"></tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ simulator -->
+<section id="sim" class="tab">
+  <div class="cols">
+    <div class="col wide">
+      <div class="card">
+        <h2>Recipe</h2>
+        <div class="row">
+          <select id="recipeSel"></select>
+          <label>Runs <input id="runs" type="number" value="20000" min="100" step="1000"></label>
+          <label>Mode <select id="mode"><option>auto</option><option>mc</option><option>exact</option><option>both</option></select></label>
+          <button id="runBtn">Run</button>
+        </div>
+        <textarea id="recipeSrc" rows="26" spellcheck="false"></textarea>
+        <p class="muted small">Edits are not saved to disk. <code>include</code> paths resolve from the recipes folder.</p>
+      </div>
+    </div>
+    <div class="col wide">
+      <div class="progress" id="simProgress" hidden><div class="bar"><div></div></div><span class="ptext"></span></div>
+      <div id="simResult"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ compare -->
+<section id="compare" class="tab">
+  <div class="card">
+    <h2>Compare recipes</h2>
+    <div id="cmpList" class="chips"></div>
+    <div class="row">
+      <label>Runs per recipe <input id="cmpRuns" type="number" value="20000" min="100" step="1000"></label>
+      <button id="cmpBtn">Compare</button>
+    </div>
+  </div>
+  <div class="progress" id="cmpProgress" hidden><div class="bar"><div></div></div><span class="ptext"></span></div>
+  <div id="cmpResult"></div>
+</section>
+
+<!-- ============================================================ rules / prices -->
+<section id="rules" class="tab"><div class="card"><h2>Crafting rules</h2><p class="muted small">Every rule the engine uses, with its source. Results list the unverified or disputed rules they depend on.</p><table class="list"><tbody id="rulesBody"></tbody></table></div></section>
+<section id="prices" class="tab"><div class="card"><h2>Prices</h2><div id="priceMeta" class="small muted"></div><div class="row"><button id="fetchPrices">Fetch latest prices (poe.ninja)</button><span id="fetchMsg" class="small muted"></span></div><input id="priceFilter" placeholder="filter"><table class="list"><tbody id="priceBody"></tbody></table></div></section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
