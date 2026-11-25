@@ -38,3 +38,10 @@ headless PoB to 0.00%.
 * item-swap calculation (`GetMiscCalculator` with `repSlotName`/`repItem`, what PoB's tooltips use): ~7.5 ms
   (~130 items/second per thread)
 * boot + load build: ~4 s (pay once per worker)
+
+## Relation to `tools/pob/` and `pob-headless`
+The local web app (`crates/poecraft-server`, "Test in PoB") drives an *installed* Windows PoB through
+the sibling `pob-headless` harness (`POB_HEADLESS`) with `tools/pob/score_items.lua`. This bridge is
+the Linux/cloud equivalent (stock LuaJIT + a pinned PoB checkout), so Claude sessions without the
+owner's machine can load builds and score items too. Measured here: the tooltip calculator
+(`GetMiscCalculator`) gives the same TotalDPS as a full rebuild for an unchanged item, at ~6x the speed.
