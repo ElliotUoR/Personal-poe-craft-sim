@@ -1,0 +1,781 @@
+{
+ "_source": "https://poedb.tw/us/Monster_Modifiers (Archnemesis Mods), fetched 2026-11-26. Visible stat lines only: PoEDB does not list the effects some mods grant through buffs (e.g. Berserker, Frenzied, Soul Eater), which therefore have empty or partial lines.",
+ "mods": [
+  {
+   "name": "Toxic",
+   "id": "MonsterArchnemesisPoisoner_",
+   "lines": [
+    "30% increased Poison Duration",
+    "Poison on Hit",
+    "30% increased Damage with Poison",
+    "All Damage from Hits can Poison",
+    "+25% Chaos Resistance against Damage Over Time"
+   ]
+  },
+  {
+   "name": "Chaosweaver",
+   "id": "MonsterArchnemesisVoidTouched",
+   "lines": [
+    "+40% to Chaos Resistance",
+    "25% of Physical Damage Converted to Chaos Damage",
+    "Gain 15% of Non-Chaos Damage as extra Chaos Damage"
+   ]
+  },
+  {
+   "name": "Frostweaver",
+   "id": "MonsterArchnemesisFrostTouched_",
+   "lines": [
+    "50% increased Cold Damage",
+    "+50% to Cold Resistance",
+    "Gain 50% of Physical Damage as Extra Cold Damage",
+    "25% of Physical Damage Converted to Cold Damage",
+    "Inflict Cold Exposure on Hit"
+   ]
+  },
+  {
+   "name": "Permafrost",
+   "id": "MonsterArchnemesisFreezer__",
+   "lines": [
+    "25% increased Freeze Duration on Enemies",
+    "35% chance to Freeze",
+    "All Damage can Freeze"
+   ]
+  },
+  {
+   "name": "Hasted",
+   "id": "MonsterArchnemesisRaider_",
+   "lines": [
+    "100% increased Evasion Rating"
+   ]
+  },
+  {
+   "name": "Deadeye",
+   "id": "MonsterArchnemesisDeadeye",
+   "lines": [
+    "20% increased Damage"
+   ]
+  },
+  {
+   "name": "Bombardier",
+   "id": "MonsterArchnemesisBombardier___",
+   "lines": [
+    "Skills Chain +2 times",
+    "Skills fire 2 additional Projectiles",
+    "Projectiles have 20% chance to be able to Chain when colliding with terrain",
+    "Projectiles gain Damage as they travel farther, dealing up",
+    "to 60% increased Damage with Hits to targets"
+   ]
+  },
+  {
+   "name": "Flameweaver",
+   "id": "MonsterArchnemesisFlameTouched",
+   "lines": [
+    "50% increased Fire Damage",
+    "+50% to Fire Resistance",
+    "Gain 50% of Physical Damage as Extra Fire Damage",
+    "25% of Physical Damage Converted to Fire Damage",
+    "Inflict Fire Exposure on Hit"
+   ]
+  },
+  {
+   "name": "Incendiary",
+   "id": "MonsterArchnemesisIgniter",
+   "lines": [
+    "Hits always Ignite",
+    "25% increased Ignite Duration on Enemies",
+    "All Damage can Ignite"
+   ]
+  },
+  {
+   "name": "Arcane Buffer",
+   "id": "MonsterArchnemesisArcaneEnchanted",
+   "lines": [
+    "150% faster start of Energy Shield Recharge",
+    "Chaos Damage taken does not bypass Energy Shield"
+   ]
+  },
+  {
+   "name": "Echoist",
+   "id": "MonsterArchnemesisEchoist___",
+   "lines": []
+  },
+  {
+   "name": "Stormweaver",
+   "id": "MonsterArchnemesisStormTouched_",
+   "lines": [
+    "50% increased Lightning Damage",
+    "+50% to Lightning Resistance",
+    "Gain 50% of Physical Damage as Extra Lightning Damage",
+    "25% of Physical Damage Converted to Lightning Damage",
+    "Inflict Lightning Exposure on Hit"
+   ]
+  },
+  {
+   "name": "Electrocuting",
+   "id": "MonsterArchnemesisShocker_",
+   "lines": [
+    "Hits always Shock",
+    "50% increased Shock Duration on Enemies",
+    "All Damage can Shock",
+    "25% increased Effect of Shock"
+   ]
+  },
+  {
+   "name": "Bonebreaker",
+   "id": "MonsterArchnemesisBonebreaker_",
+   "lines": [
+    "100% increased Global Accuracy Rating",
+    "Always Stuns Enemies on Hit",
+    "30% reduced Attack and Cast Speed",
+    "20% increased Character Size",
+    "250% increased Stun Threshold",
+    "25% chance to double Stun Duration",
+    "Extra gore"
+   ]
+  },
+  {
+   "name": "Bloodletter",
+   "id": "MonsterArchnemesisBloodletter_",
+   "lines": [
+    "Attacks cause Bleeding",
+    "50% increased Damage with Bleeding",
+    "25% increased Bleeding Duration",
+    "25% reduced Physical Damage taken over time"
+   ]
+  },
+  {
+   "name": "Steel-infused",
+   "id": "MonsterArchnemesisSteelAttuned___",
+   "lines": [
+    "40% increased Global Physical Damage",
+    "30% additional Physical Damage Reduction",
+    "Overwhelm 10% Physical Damage Reduction",
+    "250% increased Stun Threshold"
+   ]
+  },
+  {
+   "name": "Gargantuan",
+   "id": "MonsterArchnemesisGargantuan",
+   "lines": [
+    "20% increased Damage",
+    "40% increased maximum Life",
+    "80% increased Area of Effect",
+    "40% increased Character Size"
+   ]
+  },
+  {
+   "name": "Berserker",
+   "id": "MonsterArchnemesisBerserker__",
+   "lines": []
+  },
+  {
+   "name": "Sentinel",
+   "id": "MonsterArchnemesisDefender",
+   "lines": [
+    "50% Chance to Block Attack Damage",
+    "50% Chance to Block Spell Damage",
+    "You take 20% of Damage from Blocked Hits"
+   ]
+  },
+  {
+   "name": "Juggernaut",
+   "id": "MonsterArchnemesisJuggernaut___",
+   "lines": [
+    "20% increased Damage",
+    "30% increased Area of Effect",
+    "15% increased Character Size",
+    "Cannot be Stunned",
+    "Action Speed cannot be modified to below Base Value",
+    "Movement Speed cannot be modified to below Base Value",
+    "Gain 2 Endurance Charges every second if you've been Hit Recently"
+   ]
+  },
+  {
+   "name": "Vampiric",
+   "id": "MonsterArchnemesisVampiric",
+   "lines": [
+    "25% increased Damage while Leeching Life",
+    "100% of Damage Leeched as Life",
+    "200% increased total Recovery per second from Life Leech",
+    "Enemies Cannot Leech Life From you",
+    "Life Leech effects are not removed when Unreserved Life is Filled",
+    "Enemies Cannot Leech Energy Shield From you"
+   ]
+  },
+  {
+   "name": "Overcharged",
+   "id": "MonsterArchnemesisChargeGenerator__",
+   "lines": []
+  },
+  {
+   "name": "Soul Conduit",
+   "id": "MonsterArchnemesisSoulConduit____",
+   "lines": []
+  },
+  {
+   "name": "Opulent",
+   "id": "MonsterArchnemesisWealthy",
+   "lines": []
+  },
+  {
+   "name": "Malediction",
+   "id": "MonsterArchnemesisOppressor_",
+   "lines": []
+  },
+  {
+   "name": "Consecrator",
+   "id": "MonsterArchnemesisConsecration_",
+   "lines": []
+  },
+  {
+   "name": "Frenzied",
+   "id": "MonsterArchnemesisRampage",
+   "lines": []
+  },
+  {
+   "name": "Heralding Minions",
+   "id": "MonsterArchnemesisHeraldOfTheObelisk_",
+   "lines": []
+  },
+  {
+   "name": "Empowering Minions",
+   "id": "MonsterArchnemesisUnionOfSouls",
+   "lines": []
+  },
+  {
+   "name": "Assassin",
+   "id": "MonsterArchnemesisAssassin",
+   "lines": [
+    "You take 50% reduced Extra Damage from Critical Strikes",
+    "All hits are Critical Strikes",
+    "100% Global chance to Blind Enemies on hit",
+    "100% increased Blind Effect"
+   ]
+  },
+  {
+   "name": "Trickster",
+   "id": "MonsterArchnemesisTrickster_",
+   "lines": [
+    "Prevent +10% of Suppressed Spell Damage",
+    "+100% chance to Suppress Spell Damage",
+    "Non-Damaging Ailments Reflection"
+   ]
+  },
+  {
+   "name": "Necromancer",
+   "id": "MonsterArchnemesisNecromancer_",
+   "lines": [
+    "30% increased maximum Life",
+    "Gain 10% of Non-Chaos Damage as extra Chaos Damage"
+   ]
+  },
+  {
+   "name": "Rejuvenating",
+   "id": "MonsterArchnemesisRejuvenating",
+   "lines": [
+    "20% increased maximum Life",
+    "Regenerate 2% of Life per second"
+   ]
+  },
+  {
+   "name": "Executioner",
+   "id": "MonsterArchnemesisExecutioner",
+   "lines": []
+  },
+  {
+   "name": "Hexer",
+   "id": "MonsterArchnemesisHexer",
+   "lines": [
+    "Hexproof"
+   ]
+  },
+  {
+   "name": "Drought Bringer",
+   "id": "MonsterArchnemesisFlaskDrain__",
+   "lines": [
+    "Regenerate 1.5% of Life per second"
+   ]
+  },
+  {
+   "name": "Entangler",
+   "id": "MonsterArchnemesisGraspingVines",
+   "lines": [
+    "+25% to Chaos Resistance",
+    "Poison on Hit",
+    "All Damage from Hits can Poison"
+   ]
+  },
+  {
+   "name": "Temporal Bubble",
+   "id": "MonsterArchnemesisTimeBubble",
+   "lines": []
+  },
+  {
+   "name": "Treant Horde",
+   "id": "MonsterArchnemesisSaplings",
+   "lines": []
+  },
+  {
+   "name": "Frost Strider",
+   "id": "MonsterArchnemesisFrostWalker",
+   "lines": [
+    "30% increased Cold Damage",
+    "+40% to Cold Resistance",
+    "Gain 25% of Physical Damage as Extra Cold Damage",
+    "50% of Physical Damage Converted to Cold Damage",
+    "200% increased Effect of Chill"
+   ]
+  },
+  {
+   "name": "Ice Prison",
+   "id": "MonsterArchnemesisGlacialCage",
+   "lines": [
+    "30% increased Cold Damage",
+    "+40% to Cold Resistance",
+    "Gain 25% of Physical Damage as Extra Cold Damage",
+    "50% of Physical Damage Converted to Cold Damage",
+    "20% additional Physical Damage Reduction"
+   ]
+  },
+  {
+   "name": "Soul Eater",
+   "id": "MonsterArchnemesisSoulEater_",
+   "lines": []
+  },
+  {
+   "name": "Flame Strider",
+   "id": "MonsterArchnemesisFlameWalker_",
+   "lines": [
+    "30% increased Fire Damage",
+    "+40% to Fire Resistance",
+    "Hits always Ignite",
+    "Gain 25% of Physical Damage as Extra Fire Damage",
+    "50% of Physical Damage Converted to Fire Damage"
+   ]
+  },
+  {
+   "name": "Corpse Detonator",
+   "id": "MonsterArchnemesisCorpseExploder_",
+   "lines": [
+    "+40% to Fire Resistance"
+   ]
+  },
+  {
+   "name": "Prismatic",
+   "id": "MonsterArchnemesisPrismatic",
+   "lines": [
+    "Hits always Ignite",
+    "Hits always Shock",
+    "All Damage with Hits can Chill",
+    "Gain 60% of Physical Damage as Extra Damage of a random Element",
+    "All Damage can Ignite",
+    "All Damage can Shock"
+   ]
+  },
+  {
+   "name": "Magma Barrier",
+   "id": "MonsterArchnemesisVolatileFlameBlood",
+   "lines": [
+    "30% increased Fire Damage",
+    "+40% to Fire Resistance",
+    "Gain 25% of Physical Damage as Extra Fire Damage",
+    "25% of Physical Damage Converted to Fire Damage",
+    "25% additional Physical Damage Reduction"
+   ]
+  },
+  {
+   "name": "Mirror Image",
+   "id": "MonsterArchnemesisMirrorImage",
+   "lines": []
+  },
+  {
+   "name": "Storm Strider",
+   "id": "MonsterArchnemesisLightningWalker_",
+   "lines": [
+    "30% increased Lightning Damage",
+    "+40% to Lightning Resistance",
+    "Gain 25% of Physical Damage as Extra Lightning Damage",
+    "50% of Physical Damage Converted to Lightning Damage"
+   ]
+  },
+  {
+   "name": "Mana Siphoner",
+   "id": "MonsterArchnemesisManaDonut",
+   "lines": [
+    "30% increased Lightning Damage",
+    "+40% to Lightning Resistance",
+    "Gain 25% of Physical Damage as Extra Lightning Damage",
+    "50% of Physical Damage Converted to Lightning Damage"
+   ]
+  },
+  {
+   "name": "Corrupter",
+   "id": "MonsterArchnemesisCorrupter_",
+   "lines": []
+  },
+  {
+   "name": "Benevolent Guardian",
+   "id": "MonsterArchnemesisDivineTouched__",
+   "lines": [
+    "30% Chance to Block Attack Damage",
+    "30% Chance to Block Spell Damage",
+    "You take 20% of Damage from Blocked Hits"
+   ]
+  },
+  {
+   "name": "Crystal-skinned",
+   "id": "MonsterArchnemesisLivingCrystals__",
+   "lines": [
+    "+40% to all Elemental Resistances",
+    "Gain 40% of Physical Damage as Extra Damage of a random Element"
+   ]
+  },
+  {
+   "name": "Empowered Elements",
+   "id": "MonsterArchnemesisCycleOfElements",
+   "lines": []
+  },
+  {
+   "name": "Effigy",
+   "id": "MonsterArchnemesisVoodooDoll",
+   "lines": []
+  },
+  {
+   "name": "Lunaris-touched",
+   "id": "MonsterArchnemesisLunaris",
+   "lines": [
+    "50% increased Damage",
+    "+30% to all Elemental Resistances",
+    "+20% to Chaos Resistance",
+    "10% additional Physical Damage Reduction"
+   ]
+  },
+  {
+   "name": "Solaris-touched",
+   "id": "MonsterArchnemesisSolaris",
+   "lines": [
+    "50% increased Damage",
+    "+30% to all Elemental Resistances",
+    "+20% to Chaos Resistance",
+    "10% additional Physical Damage Reduction"
+   ]
+  },
+  {
+   "name": "Arakaali-touched",
+   "id": "MonsterArchnemesisArakaali_",
+   "lines": [
+    "50% increased Damage",
+    "+30% to all Elemental Resistances",
+    "+20% to Chaos Resistance",
+    "10% additional Physical Damage Reduction",
+    "Dropped Items with Rarity are converted to Divination Cards"
+   ]
+  },
+  {
+   "name": "Brine King-touched",
+   "id": "MonsterArchnemesisBrineKing___",
+   "lines": [
+    "50% increased Damage",
+    "+30% to all Elemental Resistances",
+    "+20% to Chaos Resistance",
+    "10% additional Physical Damage Reduction",
+    "Dropped Items with Rarity are converted to Divination Cards"
+   ]
+  },
+  {
+   "name": "Tukohama-touched",
+   "id": "MonsterArchnemesisTukohama",
+   "lines": [
+    "50% increased Damage",
+    "+30% to all Elemental Resistances",
+    "+20% to Chaos Resistance",
+    "10% additional Physical Damage Reduction",
+    "Dropped Items with Rarity are converted to Maps"
+   ]
+  },
+  {
+   "name": "Abberath-touched",
+   "id": "MonsterArchnemesisAbberath",
+   "lines": [
+    "50% increased Damage",
+    "+30% to all Elemental Resistances",
+    "+20% to Chaos Resistance",
+    "10% additional Physical Damage Reduction",
+    "Dropped Items with Rarity are converted to Maps"
+   ]
+  },
+  {
+   "name": "Shakari-touched",
+   "id": "MonsterArchnemesisShakari_",
+   "lines": [
+    "50% increased Damage",
+    "+30% to all Elemental Resistances",
+    "+20% to Chaos Resistance",
+    "10% additional Physical Damage Reduction"
+   ]
+  },
+  {
+   "name": "Innocence-touched",
+   "id": "MonsterArchnemesisInnocence_____",
+   "lines": [
+    "50% increased Damage",
+    "+40% to all Elemental Resistances",
+    "+25% to Chaos Resistance",
+    "15% additional Physical Damage Reduction",
+    "Dropped Items with Rarity are converted to Threads"
+   ]
+  },
+  {
+   "name": "Kitava-touched",
+   "id": "MonsterArchnemesisKitava",
+   "lines": [
+    "50% increased Damage",
+    "+40% to all Elemental Resistances",
+    "+25% to Chaos Resistance",
+    "15% additional Physical Damage Reduction"
+   ]
+  },
+  {
+   "name": "Bloodletter",
+   "id": "MonsterArchnemesisBloodletterMagic",
+   "lines": [
+    "Attacks cause Bleeding",
+    "50% increased Damage with Bleeding",
+    "25% increased Bleeding Duration",
+    "25% reduced Physical Damage taken over time"
+   ]
+  },
+  {
+   "name": "Heralds of the Obelisk",
+   "id": "MonsterArchnemesisHeraldOfTheObeliskMagic",
+   "lines": []
+  },
+  {
+   "name": "Spirit Walkers",
+   "id": "MonsterArchnemesisSpiritWalkersMagic",
+   "lines": []
+  },
+  {
+   "name": "Union of Souls",
+   "id": "MonsterArchnemesisUnionOfSoulsMagic",
+   "lines": [
+    "30% increased maximum Life",
+    "20% increased Area of Effect",
+    "15% increased Character Size"
+   ]
+  },
+  {
+   "name": "Voidspawn of Abaxoth",
+   "id": "MonsterArchnemesisVoidspawnOfAbaxothMagic",
+   "lines": [
+    "50% increased Damage",
+    "+50% to all Elemental Resistances",
+    "+35% to Chaos Resistance",
+    "40% additional Physical Damage Reduction"
+   ]
+  },
+  {
+   "name": "Storm Herald",
+   "id": "MonsterArchnemesisLightningStorm",
+   "lines": [
+    "30% increased Lightning Damage",
+    "+40% to Lightning Resistance",
+    "Gain 25% of Physical Damage as Extra Lightning Damage",
+    "50% of Physical Damage Converted to Lightning Damage"
+   ]
+  },
+  {
+   "name": "Final Gasp",
+   "id": "MonsterArchnemesisFinalGasp",
+   "lines": []
+  },
+  {
+   "name": "Arcane Buffer",
+   "id": "MonsterArchnemesisArcaneEnchantedMagic",
+   "lines": [
+    "50% faster start of Energy Shield Recharge",
+    "Chaos Damage taken does not bypass Energy Shield",
+    "Gain 40% of Maximum Life as Extra Maximum Energy Shield"
+   ]
+  },
+  {
+   "name": "Prismatic",
+   "id": "MonsterArchnemesisPrismaticMagic",
+   "lines": [
+    "+50% to all Elemental Resistances",
+    "Hits always Ignite",
+    "Hits always Shock",
+    "All Damage with Hits can Chill",
+    "Gain 60% of Physical Damage as Extra Damage of a random Element",
+    "All Damage can Ignite",
+    "All Damage can Shock"
+   ]
+  },
+  {
+   "name": "Deadeye",
+   "id": "MonsterArchnemesisDeadeyeMagic",
+   "lines": [
+    "30% increased Damage",
+    "100% increased Global Accuracy Rating",
+    "100% increased Global Critical Strike Chance"
+   ]
+  },
+  {
+   "name": "Hasted",
+   "id": "MonsterArchnemesisRaiderMagic",
+   "lines": [
+    "30% increased Attack Speed",
+    "30% increased Cast Speed",
+    "100% increased Evasion Rating",
+    "40% increased Movement Speed"
+   ]
+  },
+  {
+   "name": "Bonebreaker",
+   "id": "MonsterArchnemesisBonebreakerMagic",
+   "lines": [
+    "60% increased Global Physical Damage",
+    "100% increased Global Accuracy Rating",
+    "50% reduced Enemy Stun Threshold",
+    "40% reduced Attack and Cast Speed",
+    "20% increased Character Size",
+    "250% increased Stun Threshold",
+    "25% chance to double Stun Duration",
+    "Extra gore"
+   ]
+  },
+  {
+   "name": "Splinterer",
+   "id": "MonsterArchnemesisMultiProjectiles",
+   "lines": [
+    "Skills fire 4 additional Projectiles",
+    "30% increased Projectile Damage",
+    "30% chance to avoid Projectiles"
+   ]
+  },
+  {
+   "name": "Permafrost",
+   "id": "MonsterArchnemesisFreezerMagic",
+   "lines": [
+    "20% chance to Freeze",
+    "All Damage can Freeze"
+   ]
+  },
+  {
+   "name": "Toxic",
+   "id": "MonsterArchnemesisPoisonerMagic",
+   "lines": [
+    "30% increased Poison Duration",
+    "Poison on Hit",
+    "30% increased Damage with Poison",
+    "All Damage from Hits can Poison",
+    "+25% Chaos Resistance against Damage Over Time"
+   ]
+  },
+  {
+   "name": "Incendiary",
+   "id": "MonsterArchnemesisIgniterMagic",
+   "lines": [
+    "Hits always Ignite",
+    "25% increased Ignite Duration on Enemies",
+    "All Damage can Ignite"
+   ]
+  },
+  {
+   "name": "Electrocuting",
+   "id": "MonsterArchnemesisShockerMagic",
+   "lines": [
+    "Hits always Shock",
+    "50% increased Shock Duration on Enemies",
+    "All Damage can Shock",
+    "25% increased Effect of Shock"
+   ]
+  },
+  {
+   "name": "Consecrator",
+   "id": "MonsterArchnemesisConsecratorMagic",
+   "lines": []
+  },
+  {
+   "name": "Flame Strider",
+   "id": "MonsterArchnemesisFlameWalkerMagic",
+   "lines": [
+    "30% increased Fire Damage",
+    "+40% to Fire Resistance",
+    "Hits always Ignite",
+    "Gain 25% of Physical Damage as Extra Fire Damage",
+    "50% of Physical Damage Converted to Fire Damage"
+   ]
+  },
+  {
+   "name": "Frost Strider",
+   "id": "MonsterArchnemesisFrostWalkerMagic",
+   "lines": [
+    "30% increased Cold Damage",
+    "+40% to Cold Resistance",
+    "Gain 25% of Physical Damage as Extra Cold Damage",
+    "50% of Physical Damage Converted to Cold Damage",
+    "200% increased Effect of Chill"
+   ]
+  },
+  {
+   "name": "Storm Strider",
+   "id": "MonsterArchnemesisLightningWalkerMagic",
+   "lines": [
+    "30% increased Lightning Damage",
+    "+40% to Lightning Resistance",
+    "Gain 25% of Physical Damage as Extra Lightning Damage",
+    "50% of Physical Damage Converted to Lightning Damage"
+   ]
+  },
+  {
+   "name": "Corrupter",
+   "id": "MonsterArchnemesisCorrupterMagic",
+   "lines": []
+  },
+  {
+   "name": "Sentinel",
+   "id": "MonsterArchnemesisDefenderMagic",
+   "lines": [
+    "50% Chance to Block Attack Damage",
+    "50% Chance to Block Spell Damage",
+    "You take 10% of Damage from Blocked Hits"
+   ]
+  },
+  {
+   "name": "Astral-touched",
+   "id": "MonsterModAstralDaemon",
+   "lines": []
+  },
+  {
+   "name": "Abyssal Meteors",
+   "id": "MonsterModAbyssMeteors",
+   "lines": []
+  },
+  {
+   "name": "Kurgal's Gasp",
+   "id": "MonsterModKurgalsGasp",
+   "lines": []
+  },
+  {
+   "name": "Lightless Well",
+   "id": "MonsterModLightlessWell",
+   "lines": []
+  },
+  {
+   "name": "Abyssal Siphoner",
+   "id": "MonsterModAbyssalDonut",
+   "lines": []
+  },
+  {
+   "name": "Abyssal Eruption",
+   "id": "MonsterModAbyssalVolcano",
+   "lines": []
+  },
+  {
+   "name": "Wasting Well",
+   "id": "MonsterModAbyssalGround",
+   "lines": []
+  }
+ ]
+}
